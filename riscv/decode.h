@@ -110,6 +110,9 @@ private:
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 
+#define TAG_UNION(tag1, tag2) (tag1 | tag2)
+#define TAG_INTERSECTION(tag1, tag2) (tag1 & tag2)
+
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD 
   #define WRITE_RD(value) ({ \
