@@ -44,26 +44,29 @@ const int NFPR = 32;
 #define FSR_NXA  (FPEXC_NX << FSR_AEXC_SHIFT)
 #define FSR_AEXC (FSR_NVA | FSR_OFA | FSR_UFA | FSR_DZA | FSR_NXA)
 
+typedef uint64_t insn_bits_t;
 class insn_t
 {
 public:
-  uint32_t bits() { return b; }
-  int32_t i_imm() { return int32_t(b) >> 20; }
-  int32_t s_imm() { return x(7, 5) + (xs(25, 7) << 5); }
-  int32_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
-  int32_t u_imm() { return int32_t(b) >> 12 << 12; }
-  int32_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
-  uint32_t rd() { return x(7, 5); }
-  uint32_t rs1() { return x(15, 5); }
-  uint32_t rs2() { return x(20, 5); }
-  uint32_t rs3() { return x(27, 5); }
-  uint32_t rm() { return x(12, 3); }
-  uint32_t csr() { return x(20, 12); }
+  insn_t() = default;
+  insn_t(insn_bits_t bits) : b(bits) {}
+  insn_bits_t bits() { return b; }
+  int64_t i_imm() { return int64_t(b) >> 20; }
+  int64_t s_imm() { return x(7, 5) + (xs(25, 7) << 5); }
+  int64_t sb_imm() { return (x(8, 4) << 1) + (x(25,6) << 5) + (x(7,1) << 11) + (imm_sign() << 12); }
+  int64_t u_imm() { return int64_t(b) >> 12 << 12; }
+  int64_t uj_imm() { return (x(21, 10) << 1) + (x(20, 1) << 11) + (x(12, 8) << 12) + (imm_sign() << 20); }
+  uint64_t rd() { return x(7, 5); }
+  uint64_t rs1() { return x(15, 5); }
+  uint64_t rs2() { return x(20, 5); }
+  uint64_t rs3() { return x(27, 5); }
+  uint64_t rm() { return x(12, 3); }
+  uint64_t csr() { return x(20, 12); }
 private:
-  uint32_t b;
-  uint32_t x(int lo, int len) { return b << (32-lo-len) >> (32-len); }
-  uint32_t xs(int lo, int len) { return int32_t(b) << (32-lo-len) >> (32-len); }
-  uint32_t imm_sign() { return xs(31, 1); }
+  insn_bits_t b;
+  uint64_t x(int lo, int len) { return (b >> lo) & ((insn_bits_t(1) << len)-1); }
+  uint64_t xs(int lo, int len) { return int64_t(b) << (64-lo-len) >> (64-len); }
+  uint64_t imm_sign() { return xs(63, 1); }
 };
 
 template <class T, size_t N, bool zero_reg>
@@ -76,9 +79,8 @@ public:
   }
   void write(size_t i, T value)
   {
-    data[i] = value;
-    if (zero_reg)
-      data[0] = 0;
+    if (!zero_reg || i != 0)
+      data[i] = value;
   }
   void write(size_t i, T value, T tag) 
   {
@@ -103,7 +105,10 @@ private:
 #define STATE (*p->get_state())
 #define RS1 STATE.XPR[insn.rs1()]
 #define RS2 STATE.XPR[insn.rs2()]
+#define TAG_S1 STATE.XPR.read_tag(insn.rs1())
+#define TAG_S2 STATE.XPR.read_tag(insn.rs2())
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
+#define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD 
@@ -128,8 +133,6 @@ private:
       })
 #endif
  
-
-
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
 #define JUMP_TARGET (pc + insn.uj_imm())
@@ -165,11 +168,7 @@ private:
    ((x) & 0x3f) < 0x3f ? 6 : \
    8)
 
-#define set_pc(x) \
-  do { if ((x) & 3 /* For now... */) \
-         throw trap_instruction_address_misaligned(); \
-       npc = sext_xprlen(x); \
-     } while(0)
+#define set_pc(x) (npc = sext_xprlen(x))
 
 #define validate_csr(which, write) ({ \
   unsigned my_priv = (STATE.sr & SR_S) ? 1 : 0; \
