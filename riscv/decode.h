@@ -76,16 +76,18 @@ public:
   void reset()
   {
     memset(data, 0, sizeof(data));
+    memset(tags, 0, sizeof(tags));
   }
   void write(size_t i, T value)
   {
     if (!zero_reg || i != 0)
       data[i] = value;
   }
-  void write(size_t i, T value, T tag) 
+  void write(size_t i, T value, T tag)
   {
     write(i, value);
-    tags[i] = tag;
+    if (!zero_reg || i != 0)
+      tags[i] = tag;
   }
   T& read_tag(size_t i)
   {
@@ -114,7 +116,7 @@ private:
 #define TAG_INTERSECTION(tag1, tag2) (tag1 & tag2)
 
 #ifdef RISCV_ENABLE_COMMITLOG
-  #undef WRITE_RD 
+  #undef WRITE_RD
   #define WRITE_RD(value) ({ \
         reg_t wdata = value; /* value is a func with side-effects */ \
         STATE.log_reg_write = (commit_log_reg_t){insn.rd() << 1, wdata}; \
@@ -126,16 +128,16 @@ private:
 #define FRS2 STATE.FPR[insn.rs2()]
 #define FRS3 STATE.FPR[insn.rs3()]
 #define WRITE_FRD(value) STATE.FPR.write(insn.rd(), value)
- 
+
 #ifdef RISCV_ENABLE_COMMITLOG
-  #undef WRITE_FRD 
+  #undef WRITE_FRD
   #define WRITE_FRD(value) ({ \
         freg_t wdata = value; /* value is a func with side-effects */ \
         STATE.log_reg_write = (commit_log_reg_t){(insn.rd() << 1) | 1, wdata}; \
         STATE.FPR.write(insn.rd(), wdata); \
       })
 #endif
- 
+
 #define SHAMT (insn.i_imm() & 0x3F)
 #define BRANCH_TARGET (pc + insn.sb_imm())
 #define JUMP_TARGET (pc + insn.uj_imm())
