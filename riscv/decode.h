@@ -101,7 +101,7 @@ public:
     if (!zero_reg || i != 0)
       tags[i] = tag;
   }
-  T& read_tag(size_t i)
+  tag_t& read_tag(size_t i)
   {
     return tags[i];
   }
@@ -111,7 +111,7 @@ public:
   }
 private:
   T data[N];
-  T tags[N];
+  tag_t tags[N];
 };
 
 // helpful macros, etc
