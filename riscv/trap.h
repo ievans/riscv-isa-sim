@@ -54,5 +54,6 @@ DECLARE_MEM_TRAP(CAUSE_MISALIGNED_STORE, store_address_misaligned)
 DECLARE_MEM_TRAP(CAUSE_FAULT_LOAD, load_access_fault)
 DECLARE_MEM_TRAP(CAUSE_FAULT_STORE, store_access_fault)
 DECLARE_TRAP(CAUSE_ACCELERATOR_DISABLED, accelerator_disabled)
+DECLARE_TRAP(CAUSE_TAG_VIOLATION, tag_violation);
 
 #endif
