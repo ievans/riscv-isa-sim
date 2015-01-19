@@ -134,6 +134,9 @@ private:
 #define TAG_ARITH_IMMEDIATE(tag1) (tag1)
 #define TAG_LOGIC_IMMEDIATE(tag1) (tag1)
 
+#define TAG_CSR 0
+#define TAG_PC 0
+
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD
   #define WRITE_RD(value) ({ \
