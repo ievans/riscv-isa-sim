@@ -13,6 +13,7 @@ int f() {
 }
 
 int main() {
+	__asm__ ("tagenforce ra,1");
 	f();
 	return 0;
 }
