@@ -1,1 +1,1 @@
-WRITE_RD_AND_TAG(sext_xprlen(RS1 + RS2), TAG_UNION(TAG_S1, TAG_S2));
+WRITE_RD_AND_TAG(sext_xprlen(RS1 + RS2), TAG_ADD(TAG_S1, TAG_S2));
