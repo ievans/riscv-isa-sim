@@ -50,10 +50,10 @@ public:
 
   #define load_func_tagged(type) \
     tagged_reg_t load_tagged_##type(reg_t addr) __attribute__((always_inline)) { \
-        struct tagged_reg_t; \
-        tagged_reg_t.val = load_##t(addr); \
-        tagged_reg_t.tag = 0x0; /* todo */  \
-        return tagged_reg_t; \
+        tagged_reg_t r; \
+        r.val = load_##type(addr); \
+        r.tag = 0x0; /* todo */  \
+        return r; \
   }
 
   // load value from memory at aligned address; zero extend to register width
