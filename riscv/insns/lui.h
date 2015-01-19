@@ -1,1 +1,1 @@
-WRITE_RD(insn.u_imm());
+WRITE_RD_AND_TAG(insn.u_imm(), TAG_IMMEDIATE);

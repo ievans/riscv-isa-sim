@@ -136,6 +136,8 @@ private:
 
 #define TAG_CSR 0
 #define TAG_PC 0
+#define TAG_NULL 0
+#define TAG_IMMEDIATE 0
 
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD

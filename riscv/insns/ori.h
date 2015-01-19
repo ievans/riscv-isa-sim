@@ -1,1 +1,1 @@
-WRITE_RD(insn.i_imm() | RS1);
+WRITE_RD_AND_TAG(insn.i_imm() | RS1, TAG_LOGIC_IMMEDIATE(TAG_S1));
