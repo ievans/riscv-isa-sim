@@ -14,6 +14,18 @@
 #include "common.h"
 #include <cinttypes>
 
+typedef uint8_t tag_t;
+
+typedef struct {
+  int64_t val;
+  tag_t tag;
+} tagged_sreg_t;
+
+typedef struct {
+  uint64_t val;
+  tag_t tag;
+} tagged_reg_t;
+
 typedef int64_t sreg_t;
 typedef uint64_t reg_t;
 typedef uint64_t freg_t;
