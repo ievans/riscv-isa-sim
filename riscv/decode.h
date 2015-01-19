@@ -126,6 +126,7 @@ private:
 #define TAG_S2 STATE.XPR.read_tag(insn.rs2())
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
+#define TAG_ENFORCE_ON (STATE.tag_mode == 1)
 
 #define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
 #define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
