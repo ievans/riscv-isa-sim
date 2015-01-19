@@ -48,17 +48,35 @@ public:
       return *(type##_t*)paddr; \
     }
 
+  #define load_func_tagged(type) \
+    tagged_reg_t load_tagged_##type(reg_t addr) __attribute__((always_inline)) { \
+        struct tagged_reg_t; \
+        tagged_reg_t.val = load_##t(addr); \
+        tagged_reg_t.tag = 0x0; /* todo */  \
+        return tagged_reg_t; \
+  }
+
   // load value from memory at aligned address; zero extend to register width
   load_func(uint8)
   load_func(uint16)
   load_func(uint32)
   load_func(uint64)
+  
+  load_func_tagged(uint8)
+  load_func_tagged(uint16)
+  load_func_tagged(uint32)
+  load_func_tagged(uint64)
 
   // load value from memory at aligned address; sign extend to register width
   load_func(int8)
   load_func(int16)
   load_func(int32)
   load_func(int64)
+
+  load_func_tagged(int8)
+  load_func_tagged(int16)
+  load_func_tagged(int32)
+  load_func_tagged(int64)
 
   // template for functions that store an aligned value to memory
   #define store_func(type) \
@@ -67,11 +85,23 @@ public:
       *(type##_t*)paddr = val; \
     }
 
+  #define store_func_tagged(type) \
+    void store_tagged_##type(reg_t addr, type##_t val, tag_t tag) { \
+      void* paddr = translate(addr, sizeof(type##_t), true, false); \
+      *(type##_t*)paddr = val; \
+      /* todo store the tag */ \
+    }
+
   // store value to memory at aligned address
   store_func(uint8)
   store_func(uint16)
   store_func(uint32)
   store_func(uint64)
+
+  store_func_tagged(uint8)
+  store_func_tagged(uint16)
+  store_func_tagged(uint32)
+  store_func_tagged(uint64)
 
   static const reg_t ICACHE_ENTRIES = 1024;
 
