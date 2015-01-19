@@ -50,6 +50,8 @@ struct state_t
   reg_t tohost;
   reg_t fromhost;
   reg_t count;
+
+  uint32_t tag_mode;
   uint32_t compare;
   uint32_t sr; // only modify the status register using set_pcr()
   uint32_t fflags;
@@ -76,6 +78,7 @@ public:
   void deliver_ipi(); // register an interprocessor interrupt
   bool running() { return run; }
   void set_pcr(int which, reg_t val);
+  void set_tag_mode(int enforcing);
   void set_fromhost(reg_t val);
   void set_interrupt(int which, bool on);
   reg_t get_pcr(int which);
