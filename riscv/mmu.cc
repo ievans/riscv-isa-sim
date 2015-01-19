@@ -4,8 +4,8 @@
 #include "sim.h"
 #include "processor.h"
 
-mmu_t::mmu_t(char* _mem, size_t _memsz)
- : mem(_mem), memsz(_memsz), proc(NULL)
+mmu_t::mmu_t(char* _mem, char* _tagmem, size_t _memsz)
+ : mem(_mem), tagmem(_tagmem), memsz(_memsz), proc(NULL)
 {
   flush_tlb();
 }

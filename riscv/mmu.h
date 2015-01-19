@@ -38,7 +38,7 @@ struct icache_entry_t {
 class mmu_t
 {
 public:
-  mmu_t(char* _mem, size_t _memsz);
+  mmu_t(char* _mem, char* _tagmem, size_t _memsz);
   ~mmu_t();
 
   // template for functions that load an aligned value from memory
@@ -51,8 +51,10 @@ public:
   #define load_func_tagged(type) \
     tagged_reg_t load_tagged_##type(reg_t addr) __attribute__((always_inline)) { \
         tagged_reg_t r; \
-        r.val = load_##type(addr); \
-        r.tag = 0x0; /* todo */  \
+        void* paddr = translate(addr, sizeof(type##_t), false, false); \
+        r.val = *(type##_t*)paddr; \
+        void *tagaddr = paddr_to_tagaddr(paddr); \
+        r.tag = *(tag_t*)tagaddr; \
         return r; \
   }
 
@@ -89,7 +91,8 @@ public:
     void store_tagged_##type(reg_t addr, type##_t val, tag_t tag) { \
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
       *(type##_t*)paddr = val; \
-      /* todo store the tag */ \
+      void *tagaddr = paddr_to_tagaddr(paddr); \
+      *(tag_t*)tagaddr = tag; \
     }
 
   // store value to memory at aligned address
@@ -167,6 +170,7 @@ public:
 
 private:
   char* mem;
+  char* tagmem;
   size_t memsz;
   processor_t* proc;
   memtracer_list_t tracer;
@@ -206,6 +210,12 @@ private:
       return data;
 
     return refill_tlb(addr, bytes, store, fetch);
+  }
+
+  void *paddr_to_tagaddr(void *paddr)
+    __attribute__((always_inline))
+  {
+    return (void*) ((uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO);
   }
   
   friend class processor_t;

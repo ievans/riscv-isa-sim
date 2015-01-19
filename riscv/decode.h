@@ -14,21 +14,24 @@
 #include "common.h"
 #include <cinttypes>
 
+typedef int64_t sreg_t;
+typedef uint64_t reg_t;
+typedef uint64_t freg_t;
+
 typedef uint8_t tag_t;
 
 typedef struct {
-  int64_t val;
+  sreg_t val;
   tag_t tag;
 } tagged_sreg_t;
 
 typedef struct {
-  uint64_t val;
+  reg_t val;
   tag_t tag;
 } tagged_reg_t;
 
-typedef int64_t sreg_t;
-typedef uint64_t reg_t;
-typedef uint64_t freg_t;
+#define MEM_TO_TAG_RATIO (sizeof(reg_t) / sizeof(tag_t))
+
 
 const int NXPR = 32;
 const int NFPR = 32;
@@ -124,10 +127,10 @@ private:
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 
-#define TAG_ADD(tag1, tag2) (tag1 | tag2)
-#define TAG_SUB(tag1, tag2) (tag1 | tag2)
-#define TAG_ARITH(tag1, tag2) (tag1 | tag2)
-#define TAG_LOGIC(tag1, tag2) (tag1 | tag2)
+#define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
+#define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
+#define TAG_ARITH(tag1, tag2) ((tag1) & (tag2))
+#define TAG_LOGIC(tag1, tag2) ((tag1) & (tag2))
 
 #define TAG_ADD_IMMEDIATE(tag1) (tag1)
 #define TAG_SUB_IMMEDIATE(tag1) (tag1)
@@ -135,7 +138,7 @@ private:
 #define TAG_LOGIC_IMMEDIATE(tag1) (tag1)
 
 #define TAG_CSR 0
-#define TAG_PC 0
+#define TAG_PC 1
 #define TAG_NULL 0
 #define TAG_IMMEDIATE 0
 
