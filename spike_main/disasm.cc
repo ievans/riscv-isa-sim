@@ -227,6 +227,8 @@ disassembler_t::disassembler_t()
 
   DEFINE_LTYPE(lui);
   DEFINE_LTYPE(auipc);
+  DEFINE_LTYPE(tagenforce);
+  DEFINE_LTYPE(settag);
 
   add_insn(new disasm_insn_t("ret", match_jalr | match_rs1_ra, mask_jalr | mask_rd | mask_rs1 | mask_imm, {}));
   DEFINE_I2TYPE("jr", jalr);
