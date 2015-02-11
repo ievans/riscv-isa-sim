@@ -169,7 +169,7 @@
 #define MASK_DIV  0xfe00707f
 #define MATCH_FDIV_D 0x1a000053
 #define MASK_FDIV_D  0xfe00007f
-#define MATCH_SETTAG 0x27
+#define MATCH_SETTAG 0x6b
 #define MASK_SETTAG  0x7f
 #define MATCH_FENCE 0xf
 #define MASK_FENCE  0x707f
