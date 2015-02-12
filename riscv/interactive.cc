@@ -73,6 +73,7 @@ void sim_t::interactive()
     funcs["r"] = &sim_t::interactive_run_noisy;
     funcs["rs"] = &sim_t::interactive_run_silent;
     funcs["reg"] = &sim_t::interactive_reg;
+    funcs["regt"] = &sim_t::interactive_reg_t;
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
     funcs["mem"] = &sim_t::interactive_mem;
@@ -142,6 +143,25 @@ reg_t sim_t::get_reg(const std::vector<std::string>& args)
   return procs[p]->state.XPR[r];
 }
 
+
+tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
+{
+  if(args.size() != 2)
+    throw trap_illegal_instruction();
+
+  int p = atoi(args[0].c_str());
+  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
+  if (r == NXPR)
+    r = atoi(args[1].c_str());
+  if(p >= (int)num_cores() || r >= NXPR)
+    throw trap_illegal_instruction();
+
+  tagged_reg_t tr;
+  tr.val = procs[p]->state.XPR[r];
+  tr.tag = procs[p]->state.XPR.read_tag(r);
+  return tr;
+}
+
 reg_t sim_t::get_freg(const std::vector<std::string>& args)
 {
   if(args.size() != 2)
@@ -160,6 +180,12 @@ reg_t sim_t::get_freg(const std::vector<std::string>& args)
 void sim_t::interactive_reg(const std::string& cmd, const std::vector<std::string>& args)
 {
   fprintf(stderr, "0x%016" PRIx64 "\n", get_reg(args));
+}
+
+void sim_t::interactive_reg_t(const std::string& cmd, const std::vector<std::string>& args)
+{
+  tagged_reg_t contents = get_reg_tagged(args);
+  fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
 }
 
 union fpr
