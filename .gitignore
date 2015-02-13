@@ -1,5 +1,10 @@
-build/
-*.gch
-autom4te.cache/
-.*.swp
-*.out
+# -*- mode: gitignore; -*-
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
