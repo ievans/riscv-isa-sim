@@ -67,7 +67,7 @@ void first(void) {
 }
  
 void second(void) {
-  printf("output should be: \ncalling first\ncalling second\nentering second\nsecond failed with type 3 exception; remapping to type 1.\nfirst failed, exception type 1\n--------\n"
+  printf("output should be: \ncalling first\ncalling second\nentering second\nsecond failed with type 3 exception; remapping to type 1.\nfirst failed, exception type 1\n--------\n");
   printf("entering second\n" ); /* reached */
   exception_type = 3;
   longjmp(exception_env, exception_type); /* declare that the program has failed */

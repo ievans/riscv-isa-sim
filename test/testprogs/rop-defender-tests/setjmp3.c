@@ -1,3 +1,5 @@
+
+#include <sys/types.h>
 #include <signal.h>
 #include <setjmp.h>
 
@@ -17,7 +19,7 @@ void alarm_handler(int dummy)
     printf("Giving up\n");
     longjmp(Env, 1);
   }
-  alarm(1);
+  //  alarm(1);
   signal(SIGALRM, alarm_handler);
 }
 
@@ -25,7 +27,7 @@ main()
 {
 
   signal(SIGALRM, alarm_handler);
-  alarm(1);
+  //  alarm(1);
 
   if (setjmp(Env) != 0) {
     printf("Gave up:  j = %d, i = %d\n", j, i);
