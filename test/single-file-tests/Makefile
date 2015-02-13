@@ -1,6 +1,7 @@
 # thank you SO http://stackoverflow.com/questions/14589614/make-recursive-all-c-files
 
 CC = riscv64-unknown-elf-gcc
+NATIVECC = gcc
 
 SOURCES=$(shell find . -type f -iname '*.c')
 OBJECTS=$(foreach x, $(basename $(SOURCES)), $(x).o)
@@ -14,7 +15,10 @@ all: $(BINARIES)
 #	$(CC) $^ -o $@
 
 %: %.c
-	$(CC) $(CFLAGS) $^ -o $@
+	mkdir -p bin/riscv/`dirname $@`
+	mkdir -p bin/native/`dirname $@`
+	$(CC) $(CFLAGS) $^ -o bin/riscv/$@
+	$(NATIVECC) $(CFLAGS) $^ -o bin/native/$@
 
 clean:
 	rm -f $(BINARIES)
