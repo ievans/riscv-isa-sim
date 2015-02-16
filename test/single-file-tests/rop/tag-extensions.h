@@ -21,23 +21,6 @@ void tag_enforcement_off() {
 #endif
 }
 
-// I don't understand GCC inline assembly...
-void set_tag_t3() {
-#ifdef __riscv
-  __asm__ ("settag t3,537");
-#else
-  printf(NOT_AVAILABLE);
-#endif
-}
-
-void clear_tag_t3() {
-#ifdef __riscv
-  __asm__ ("settag t3,0");
-#else
-  printf(NOT_AVAILABLE);
-#endif
-}
-
 void* malloc_tagged(size_t size, bool is_fptr) {
   void* mem = malloc(size);
 
