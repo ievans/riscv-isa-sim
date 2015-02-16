@@ -1,6 +1,6 @@
 int main();
 
-#include "tag-extensions.h"
+//#include "tag-extensions.h"
 
 int g() {
     return 4;
@@ -15,7 +15,7 @@ int f() {
 }
 
 int main() {
-    tag_enforcement_on();
+    //tag_enforcement_on();
     f();
     return 0;
 }

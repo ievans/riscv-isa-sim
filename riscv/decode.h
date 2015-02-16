@@ -129,20 +129,7 @@ private:
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
 
-#define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
-#define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
-#define TAG_ARITH(tag1, tag2) ((tag1) & (tag2))
-#define TAG_LOGIC(tag1, tag2) ((tag1) & (tag2))
-
-#define TAG_ADD_IMMEDIATE(tag1) (tag1)
-#define TAG_SUB_IMMEDIATE(tag1) (tag1)
-#define TAG_ARITH_IMMEDIATE(tag1) (tag1)
-#define TAG_LOGIC_IMMEDIATE(tag1) (tag1)
-
-#define TAG_CSR 0
-#define TAG_PC 1
-#define TAG_NULL 0
-#define TAG_IMMEDIATE 0
+#include <tagpolicy.h>
 
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD
@@ -177,6 +164,7 @@ private:
 
 #define xpr64 (xprlen == 64)
 
+#define IS_SUPERVISOR (STATE.sr & SR_S)
 #define require_supervisor if(unlikely(!(STATE.sr & SR_S))) throw trap_privileged_instruction()
 #define require_xpr64 if(unlikely(!xpr64)) throw trap_illegal_instruction()
 #define require_xpr32 if(unlikely(xpr64)) throw trap_illegal_instruction()
