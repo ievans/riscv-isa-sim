@@ -99,11 +99,15 @@ public:
     if (!zero_reg || i != 0)
       data[i] = value;
   }
+  void write_tag(size_t i, T tag)
+  {
+    if (!zero_reg || i != 0)
+      tags[i] = tag;
+  }
   void write(size_t i, T value, T tag)
   {
     write(i, value);
-    if (!zero_reg || i != 0)
-      tags[i] = tag;
+    write_tag(i, tag);
   }
   tag_t& read_tag(size_t i)
   {
@@ -127,6 +131,7 @@ private:
 #define TAG_S2 STATE.XPR.read_tag(insn.rs2())
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
+#define WRITE_RD_TAG(tag) STATE.XPR.write_tag(insn.rd(), tag)
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
 
 #include <tagpolicy.h>

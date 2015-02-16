@@ -1,1 +1,1 @@
-WRITE_RD_AND_TAG(RS1, insn.u_imm_noshift());
+WRITE_RD_TAG(insn.u_imm_noshift());
