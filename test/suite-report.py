@@ -28,8 +28,11 @@ def gitInfo():
 
 gitInfo()
 
-baseURL = 'https://github.com/6035/keurig/commit/'
-baseFileURL = 'https://github.com/6035/keurig/blob/master/tests/'
+project_name = 'riscv-isa-sim'
+project_org = 'risvc-mit'
+
+baseURL = 'https://github.com/%s/%s/commit/' % (project_org, project_name)
+baseFileURL = 'https://github.com/%s/%s/blob/master/' % (project_org, project_name)
 
 resultsBySHA = collections.OrderedDict()
 resultsBySHA = pickle.load(open('tests.dat'))
@@ -50,7 +53,7 @@ for h in resultsBySHA.keys():
 
 # and now let's convert that output to HTML!
 f = open('output.html', 'w')
-f.write('''<html><head><script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+s = '''<html><head><script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
 <style>
 body { font-family: monospace; font-size: 10pt; }
 .ok { background-color: #55FF33; }
@@ -81,9 +84,9 @@ $(document).ready(function() {
    });
  });
 </script>
-<title>Keurig Test Suite Output</title></head><body><h3>Keurig Test Suite Output</h3>
-<select id="matrix"><option>correctness</option><option># instructions</option><option># instructions delta</option><option># microseconds</option><option># microseconds delta</option></select>''')
-
+<title>{{project_name}} Test Suite Output</title></head><body><h3>{{project_name}} Test Suite Output</h3>
+<select id="matrix"><option>correctness</option><option># instructions</option><option># instructions delta</option><option># microseconds</option><option># microseconds delta</option></select>'''
+f.write(s.replace('{{project_name}}', project_name))
 f.write('<table>')
 
 isCorrect = lambda x: x[1][0][0]
@@ -113,12 +116,16 @@ for testName in sorted(resultsByTest.keys()):
         f.write('<td class="' + state + '">' + str(correct) + '/' + str(total)  + '</td>')
     f.write('</tr>')
 
+def project_basepath(filename):
+    
+
 # drilldown
 for testName in sorted(resultsByTest.keys()):
     writeSHAHeaderRow(f, testName)
 
     for fileName in sorted(resultsByTest[testName].keys()):
-        f.write('<tr><td><a href="' + baseFileURL + fileName.replace(',/', '') + '">' + os.path.basename(fileName) + '</a></td>')
+        f.write('<tr><td><a href="' + baseFileURL + project_basepath(fileName.replace(',/', '')) + \
+                '">' + os.path.basename(fileName) + '</a></td>')
         prevCycles = 0
         prevLines = 0
         for h in resultsBySHA.keys():

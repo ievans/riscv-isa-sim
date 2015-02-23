@@ -21,6 +21,7 @@ all: $(BINARIES)
 	$(NATIVECC) $(CFLAGS) $^ -o bin/native/$@
 
 clean:
+	rm -rf bin/
 	rm -f $(BINARIES)
 
 

@@ -3,10 +3,11 @@
 #include <signal.h>
 #include <setjmp.h>
 
-
 int i, j;
 long T0;
 jmp_buf Env;
+
+/*
 
 void alarm_handler(int dummy)
 {
@@ -19,15 +20,16 @@ void alarm_handler(int dummy)
     printf("Giving up\n");
     longjmp(Env, 1);
   }
-  //  alarm(1);
+  alarm(1);
   signal(SIGALRM, alarm_handler);
 }
+*/
 
 main()
 {
-
-  signal(SIGALRM, alarm_handler);
-  //  alarm(1);
+    printf("todo;;need linux");
+//  signal(SIGALRM, alarm_handler);
+//  alarm(1);
 
   if (setjmp(Env) != 0) {
     printf("Gave up:  j = %d, i = %d\n", j, i);
@@ -37,6 +39,6 @@ main()
   T0 = time(0);
 
   for (j = 0; j < 10000; j++) {
-    for (i = 0; i < 1000000; i++);
+    for (i = 0; i < 1000; i++);
   }
 }

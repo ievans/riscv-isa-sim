@@ -44,6 +44,7 @@ cflags = cflags if cflags != None else ''
 
 tests = {
           'single-file-tests': [('single-file-tests/bin/riscv', 'single-file-tests')],
+          'need_linux': [('need_linux/bin/riscv', 'need_linux')],
         }
 
 def shell(command):
@@ -142,7 +143,7 @@ for test_name, options in tests.items():
                     logFailure(test_name, input, 'program output did not match expected output ' + ''.join(diffOutput))
                     continue
 
-            cycles = 0
+            cycles = '0'
             logInstrumentedSuccess(test_name, input, output.name, cycles)
 
             binary.close()
