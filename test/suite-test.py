@@ -149,5 +149,8 @@ for test_name, options in tests.items():
             binary.close()
             output.close()
 
+print '*'*80
+print 'test suite concluded, run suite-report to see output'
+
 # done! let's write out the output 
 pickle.dump(resultsBySHA, open('tests.dat', 'w'))
