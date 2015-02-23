@@ -29,7 +29,7 @@ def gitInfo():
 gitInfo()
 
 project_name = 'riscv-isa-sim'
-project_org = 'risvc-mit'
+project_org = 'riscv-mit'
 
 baseURL = 'https://github.com/%s/%s/commit/' % (project_org, project_name)
 baseFileURL = 'https://github.com/%s/%s/blob/master/' % (project_org, project_name)
@@ -117,7 +117,9 @@ for testName in sorted(resultsByTest.keys()):
     f.write('</tr>')
 
 def project_basepath(filename):
-    
+    project_dir, ok = shell("git rev-parse --show-toplevel")
+    print project_dir, filename
+    return filename.replace(project_dir[0].strip() + '/', '')
 
 # drilldown
 for testName in sorted(resultsByTest.keys()):
