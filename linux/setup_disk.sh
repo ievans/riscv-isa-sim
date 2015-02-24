@@ -15,6 +15,7 @@ cp ../inittab etc/
 ln -s ../bin/busybox sbin/init
 cp $RISCV/sysroot64/lib/libc.so.6 lib/
 cp $RISCV/sysroot64/lib/ld.so.1 lib/
+cp $RISCV/sysroot64/lib/libm.so.6 lib/
 cd ..
 if [ "$1" != "" ]; then
     echo "Copying provided files to directory"
