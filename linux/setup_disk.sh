@@ -15,10 +15,7 @@ cp ../inittab etc/
 ln -s ../bin/busybox sbin/init
 RISCV_BIN="$(which riscv64-unknown-linux-gnu-gcc)"
 RISCV_BIN="$(dirname $RISCV_BIN)"
-cp $RISCV_BIN/../sysroot64/lib/libc.so.6 lib/
-cp $RISCV_BIN/../sysroot64/lib/ld.so.1 lib/
-cp $RISCV_BIN/../sysroot64/lib/libm.so.6 lib/
-cp $RISCV_BIN/../sysroot64/lib/libdl.so.2 lib/
+cp -a $RISCV_BIN/../sysroot64/lib/. lib/
 cd ..
 if [ "$1" != "" ]; then
     echo "Copying provided files to directory"
