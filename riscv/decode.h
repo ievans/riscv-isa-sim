@@ -133,6 +133,7 @@ private:
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 #define WRITE_RD_TAG(tag) STATE.XPR.write_tag(insn.rd(), tag)
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
+#define RETURN_REGISTER 1
 
 #include <tagpolicy.h>
 

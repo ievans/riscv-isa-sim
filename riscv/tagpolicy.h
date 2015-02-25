@@ -1,26 +1,32 @@
 /*
 // notes from meeting:
 ********************************************************************************
+TAG_POLICY_MATCH_CALLRET
 policy 1: match call/ret 
 -- A. ret must have "ret" tag
 -- B. only call sets "ret" tag
-                
+            
+TAG_POLICY_NO_RETURN_COPY
 policy 2: prevent copy of stack pointers for rop chain
 -- A. only one copy of ret live
 -- B. no arith on tags
 
+TAG_POLICY_FP
 policy 3: function pointers
 -- A. priveleged functions to introduce function pointers
 -- B. compiler support for casts
 -- C.  every call checks for function pointer tag
 
+TAG_POLICY_NO_FP_ARITH
 policy 4: (experimental)
 -- A. no arith on function pointer tags
 
+TAG_POLICY_TEMPORAL
 policy 5: temporal safety
 -- todo
 ********************************************************************************
 */
+
 
 #define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
 #define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
