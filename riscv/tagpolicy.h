@@ -27,6 +27,32 @@ policy 5: temporal safety
 ********************************************************************************
 */
 
+#ifndef _RISCV_TAG_POLICY_H
+#define _RISCV_TAG_POLICY_H
+
+/*
+void print_tag_policy() {
+    printf("tag policies enabled: ");
+    printf("TAG_POLICY_MATCH_CALLRET: %s\n",
+#if defined(TAG_POLICY_MATCH_CALLRET) 
+           "enabled");
+#else
+           "disabled");
+#endif
+    printf("TAG_POLICY_NO_RETURN_COPY: %s\n", 
+#if defined(TAG_POLICY_NO_RETURN_COPY) 
+           "enabled");
+#else
+           "disabled");
+#endif
+    printf("TAG_POLICY_FP: %s\n", 
+#if defined(TAG_POLICY_FP) 
+           "enabled");
+#else
+           "disabled");
+#endif
+}
+*/
 
 #define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
 #define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
@@ -47,3 +73,5 @@ policy 5: temporal safety
 #define CLEAR_PC_TAG(tag) 0
 #define CLEAR_TAG(reg, tag) WRITE_REG_TAG(reg, CLEAR_PC_TAG(tag))
 #endif
+
+#endif // TAG_POLICY_H

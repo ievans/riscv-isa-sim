@@ -13,6 +13,8 @@
 #include <string>
 #include <memory>
 
+#include "../riscv/tagpolicy.h"
+
 static void help()
 {
   fprintf(stderr, "usage: spike [host options] <target program> [target options]\n");
@@ -32,6 +34,32 @@ static void help()
 
 int main(int argc, char** argv)
 {
+
+
+    // todo move this to tagpolicy.h
+    printf("tag policies enabled:\n");
+    printf("\tTAG_POLICY_MATCH_CALLRET: %s\n",
+#if defined(TAG_POLICY_MATCH_CALLRET) 
+           "enabled");
+#else
+           "disabled");
+#endif
+    printf("\tTAG_POLICY_NO_RETURN_COPY: %s\n", 
+#if defined(TAG_POLICY_NO_RETURN_COPY) 
+           "enabled");
+#else
+           "disabled");
+#endif
+    printf("\tTAG_POLICY_FP: %s\n", 
+#if defined(TAG_POLICY_FP) 
+           "enabled");
+#else
+           "disabled");
+#endif
+
+
+
+
   bool debug = false;
   bool histogram = false;
   size_t nprocs = 1;

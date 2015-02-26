@@ -95,6 +95,12 @@ public:
       *(tag_t*)tagaddr = tag; \
     }
 
+  void store_tag_value(tag_t value, reg_t addr) {
+    void* paddr = translate(addr, 1, true, false);
+    void* tagaddr = paddr_to_tagaddr(paddr);
+    *(tag_t*)tagaddr = value;
+  }
+
   // store value to memory at aligned address
   store_func(uint8)
   store_func(uint16)
