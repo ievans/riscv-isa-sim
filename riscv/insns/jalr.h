@@ -5,8 +5,9 @@ if ((1 || TAG_ENFORCE_ON) &&
     (!(TAG_S1 & TAG_PC)) &&
     (insn.rs1() == 1) &&
     (IS_SUPERVISOR == false)) {
-    printf("trap would have happened at pc %08lx: \n", npc);
-//  throw trap_tag_violation();
+    // need to sub 4 from already incremented pc.
+    printf("trap would have happened at pc %08lx: \n", npc-4);
+    //throw trap_tag_violation();
 }
 set_pc((RS1 + insn.i_imm()) & ~reg_t(1));
 WRITE_RD_AND_TAG(tmp, TAG_PC);
