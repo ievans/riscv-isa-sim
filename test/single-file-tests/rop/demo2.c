@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "tag-extensions.h"
+#include "../../tag-extensions.h"
 
 int main(void) {
   tag_enforcement_on();
