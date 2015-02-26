@@ -132,10 +132,13 @@ private:
 #define WRITE_RD(value) STATE.XPR.write(insn.rd(), value)
 #define WRITE_RD_AND_TAG(value, tag) STATE.XPR.write(insn.rd(), value, tag)
 #define WRITE_RD_TAG(tag) STATE.XPR.write_tag(insn.rd(), tag)
+#define WRITE_REG(reg, value, tag) STATE.XPR.write(reg, value, tag)
+#define WRITE_REG_TAG(reg, tag) STATE.XPR.write_tag(reg, tag) 
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
 #define RETURN_REGISTER 1
 
 #include <tagpolicy.h>
+
 
 #ifdef RISCV_ENABLE_COMMITLOG
   #undef WRITE_RD
