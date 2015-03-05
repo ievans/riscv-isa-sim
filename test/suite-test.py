@@ -22,9 +22,6 @@ import os
 # are derived from with the addition of a suffix:
 expected_output_suffix = '.out'
 
-# pre-execution action is also possible
-execution_prefix = 'spike pk'
-
 # We assume that executables that are supposed to segfault, return non-zero
 # values, etc., will be handled by a wrapper script that outputs that value in
 # such a way that it can be compared to the golden output
@@ -42,9 +39,27 @@ ccompiler = os.environ.get('CC')
 cflags = os.environ.get('CFLAGS')
 cflags = cflags if cflags != None else ''
 
+pk_environments = [
+    'spike pk',
+    'spike-no-return-copy pk',
+]
+
+linux_environments = [
+    'spike +disk=root.bin vmlinux'
+]
+
+# structure: 
+# table test_metadata
+# test_id | githash| policy1 | policy2 | policy3
+# 13      |        | nox     | norop   | None
+
+# table test_results
+# test_id | time taken | cycles | filesize | result | output | etc
+
+
 tests = {
-          'single-file-tests': [('single-file-tests/bin/riscv', 'single-file-tests')],
-          'need_linux': [('need_linux/bin/riscv', 'need_linux')],
+          'single-file-tests': [('single-file-tests/bin/riscv', 'single-file-tests', pk_environments)],
+          'need_linux': [('need_linux/bin/riscv', 'need_linux', pk_environments)],
         }
 
 def shell(command):
@@ -95,7 +110,7 @@ def logFailure(testName, fileName, message, status = False):
         resultsBySHA[sha][testName][fileName].extend([(status, message)])
 
 root_dir = os.getcwd()
-for test_name, options in tests.items():
+for test_name, options, prefix_environments in tests.items():
     inputDir, outputDir = map(lambda x: os.path.join(root_dir, x), list(options[0]))
     resultsBySHA[sha][test_name] = {}
     print '[info] running ' + test_name + ' tests (folder: ' + inputDir + ')'
@@ -116,35 +131,36 @@ for test_name, options in tests.items():
                 compiler_call = '%s %s -o %s %s' % (ccompiler, cflags, binary.name, input)
                 error_output, retval = shell(compiler_call)
                 if retval != 0:
-                    logFailure(test_name, input, 'compiler gave nonzero return code ' + str(retval) + ' for command ' + compiler_call)
+                    logFailure((test_name, None), input, 'compiler gave nonzero return code ' + str(retval) + ' for command ' + compiler_call)
                     continue
                 if len(error_output) > 0:
-                    logFailure(test_name, input, 'unexpected output ' + ''.join(error_output))
+                    logFailure((test_name, None), input, 'unexpected output ' + ''.join(error_output))
                     continue
 
-            # also redirect stderr to stdout (2>&1)
-            exe_call = '%s %s > %s 2>&1' % (execution_prefix, input if is_executable else binary.name, output.name)
-            exe_error, exe_ret_val = shell(exe_call)
+            for execution_prefix in prefix_environments:
+                # also redirect stderr to stdout (2>&1)
+                exe_call = '%s %s > %s 2>&1' % (execution_prefix, input if is_executable else binary.name, output.name)
+                exe_error, exe_ret_val = shell(exe_call)
 
-            if exe_ret_val != 0:
-                logFailure(test_name, input, 
-                           'program failed to run (command "%s" returned %d): %s' %
-                           (exe_call, exe_ret_val, ''.join(exe_error)))
-                continue
-
-            if make_gold:
-                # copy the output to the golden reference
-                diffOutput, diffRetVal = shell('cp %s %s' % (output.name, expected))
-            else:
-                # run diff on the output
-                diffCall = 'diff -u %s %s' % (output.name, expected)
-                diffOutput, diffRetVal = shell(diffCall)
-                if diffRetVal != 0:
-                    logFailure(test_name, input, 'program output did not match expected output ' + ''.join(diffOutput))
+                if exe_ret_val != 0:
+                    logFailure((test_name, execution_prefix), input, 
+                               'program failed to run (command "%s" returned %d): %s' %
+                               (exe_call, exe_ret_val, ''.join(exe_error)))
                     continue
 
-            cycles = '0'
-            logInstrumentedSuccess(test_name, input, output.name, cycles)
+                if make_gold:
+                    # copy the output to the golden reference
+                    diffOutput, diffRetVal = shell('cp %s %s' % (output.name, expected))
+                else:
+                    # run diff on the output
+                    diffCall = 'diff -u %s %s' % (output.name, expected)
+                    diffOutput, diffRetVal = shell(diffCall)
+                    if diffRetVal != 0:
+                        logFailure((test_name, execution_prefix), input, 'program output did not match expected output ' + ''.join(diffOutput))
+                        continue
+
+                cycles = '0'
+                logInstrumentedSuccess((test_name, execution_prefix), input, output.name, cycles)
 
             binary.close()
             output.close()
