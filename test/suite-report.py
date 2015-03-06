@@ -11,6 +11,7 @@ import os
 import pickle
 import collections
 import subprocess
+import sqlite3
 
 def shell(command): 
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -18,7 +19,7 @@ def shell(command):
     retval = p.wait()
     return output, retval
 
-gitMessages = {}
+gitMessages = collections.OrderedDict()
 def gitInfo():
     output, retval = shell('git log --pretty=oneline --abbrev-commit')
     if retval == 0:
@@ -27,6 +28,10 @@ def gitInfo():
             gitMessages[h] = msg
 
 gitInfo()
+current_hash = gitMessages.keys()[0]
+
+def getSHA(): 
+    return shell('git rev-parse --short HEAD')[0][0].strip()
 
 project_name = 'riscv-isa-sim'
 project_org = 'riscv-mit'
@@ -40,16 +45,21 @@ resultsBySHA = pickle.load(open('tests.dat'))
 # reverse the order of the keys so that the HEAD commit is on the left
 # resultsBySHA = collections.OrderedDict(reversed(resultsBySHA.items()))
 
-resultsByTest = {}
-for h in resultsBySHA.keys():
-    for testName in resultsBySHA[h].keys():
-        if testName not in resultsByTest:
-            resultsByTest[testName] = {}
-        for fileName in resultsBySHA[h][testName].keys():
-            if fileName in resultsByTest[testName]:
-                resultsByTest[testName][fileName].extend([(h, resultsBySHA[h][testName][fileName])])
-            else:
-                resultsByTest[testName][fileName] = [(h, resultsBySHA[h][testName][fileName])]
+conn = sqlite3.connect('tests.sqlite')
+db = conn.cursor()
+
+def get_overall_rows_for_hash(sha_hash):
+    overall_query = '''SELECT suite, SUM(result), COUNT(result) FROM test_results WHERE githash = ? GROUP BY suite'''
+    s = ''
+    for row in db.execute(overall_query, [sha_hash]):
+        suite, success, total = row
+        print(row)
+        s += '<tr>'
+        s += '<td>' + suite + '</td>'
+        state = 'ok' if success == total else 'fail'
+        s += '<td class="' + state + '">' + str(success) + '/' + str(total)  + '</td>'
+        s += '</tr>'
+    return s
 
 # and now let's convert that output to HTML!
 f = open('output.html', 'w')
@@ -84,12 +94,9 @@ $(document).ready(function() {
    });
  });
 </script>
-<title>{{project_name}} Test Suite Output</title></head><body><h3>{{project_name}} Test Suite Output</h3>
-<select id="matrix"><option>correctness</option><option># instructions</option><option># instructions delta</option><option># microseconds</option><option># microseconds delta</option></select>'''
+<title>{{project_name}} Test Suite Output</title></head><body><h3>{{project_name}} Test Suite Output</h3>'''
 f.write(s.replace('{{project_name}}', project_name))
 f.write('<table>')
-
-isCorrect = lambda x: x[1][0][0]
 
 def writeSHAHeaderRow(f, headerText):
     f.write('<tr class="category"><td>' + headerText + '</td>')
@@ -97,71 +104,34 @@ def writeSHAHeaderRow(f, headerText):
         f.write('<td>' + ('HEAD<br/>' if i == len(resultsBySHA.keys()) - 1 else '') + ' <a class="category" href="' + baseURL + h + '" title="' + (gitMessages[h] if h in gitMessages else '') + '">' + h + '</a>' + '</td>')
     f.write('</tr>')
 
-writeSHAHeaderRow(f, 'overall')
+#writeSHAHeaderRow(f, 'overall')
 
-# overall
-for testName in sorted(resultsByTest.keys()):
-    f.write('<tr>')
-    f.write('<td>' + testName + '</td>')
-    for h in resultsBySHA.keys():
-        if not testName in resultsBySHA[h]:
-            f.write('<td>-</td>')
-            continue
-        allFiles = resultsBySHA[h][testName].values()
-        total = len(allFiles)
-        correct = len(filter(lambda x: x[0][0], allFiles))
-        state = 'ok'
-        if correct != total:
-            state = 'fail'
-        f.write('<td class="' + state + '">' + str(correct) + '/' + str(total)  + '</td>')
-    f.write('</tr>')
+
+assert(current_hash == getSHA())
+f.write(get_overall_rows_for_hash(current_hash))
 
 def project_basepath(filename):
     project_dir, ok = shell("git rev-parse --show-toplevel")
     print project_dir, filename
     return filename.replace(project_dir[0].strip() + '/', '')
 
-# drilldown
-for testName in sorted(resultsByTest.keys()):
-    writeSHAHeaderRow(f, testName)
 
-    for fileName in sorted(resultsByTest[testName].keys()):
-        f.write('<tr><td><a href="' + baseFileURL + project_basepath(fileName.replace(',/', '')) + \
-                '">' + os.path.basename(fileName) + '</a></td>')
-        prevCycles = 0
-        prevLines = 0
-        for h in resultsBySHA.keys():
-            found = None
-            linesDelta, cyclesDelta = '', ''
-            for item in resultsByTest[testName][fileName]:
-                if item[0] == h:
-                    found = item
-            if found == None: # if there is no data for a SHA, don't output anything
-                f.write('<td>-</td>')
-                continue
-            lines = found[1][0][1][0] if isCorrect(found) else 'fail'
-            cycles = found[1][0][1][1] if isCorrect(found) else 'fail'
-            if isCorrect(found) and lines != '' and cycles != '':
-                linesDelta = ("%+d" % (int(lines) - int(prevLines))).replace('+0', '')
-                cyclesDelta = ("%+d" % (int(cycles) - int(prevCycles))).replace('+0', '')
-                prevCycles = cycles
-                prevLines = lines
-            state = 'ok' if isCorrect(found) else 'fail'
-            divWrap = lambda text, cssclass: '<div class="' + cssclass + '">' + text + '</div>'
-            divWrap2 = lambda text, cssclass, cssclass2: '<div class="' + cssclass + ' ' + cssclass2 + '">' + text + '</div>'
-            def classForNumber(x):
-                if x == '': return ''
-                if x[0] == '+': return 'positive'
-                if x[0] == '-': return 'negative'
+divWrap = lambda text, cssclass: '<div class="' + cssclass + '">' + text + '</div>'
 
-            f.write('<td class="' + state + '">' + \
-                        divWrap(state, "state") +  \
-                        divWrap(lines, "lines") + \
-                        divWrap2(linesDelta, "linesDelta", classForNumber(linesDelta)) + \
-                        divWrap(cycles, "cycles") + \
-                        divWrap2(cyclesDelta, "cyclesDelta", classForNumber(cyclesDelta)) + \
-                        '</td>')
-        f.write('</tr>')
+# test by all policy dimensions
+def show_all_tests(sha_hash):
+    get_tests = '''SELECT * FROM test_results WHERE githash = ? ORDER BY suite, name, policies DESC'''
+    current_suite = None
+    s = ''
+    for row in db.execute(get_tests, [sha_hash]):
+        test_id, name, suite, githash, policies, time_taken, cycles, filesize, output, result = row
+        state = 'ok' if result else 'fail'
+        s += '<tr><td>%s</td><td>%s</td><td class="%s">%s</td>' % (suite, name, state, result)
+        if current_suite != suite:
+            current_suite = suite
+            # emit row
+    return s
 
+f.write(show_all_tests(current_hash))
 f.write('</table></body></html>')
 f.close()
