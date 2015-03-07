@@ -27,9 +27,6 @@ def gitInfo():
             h, msg = (line[:line.index(' ')], line[line.index(' '):].strip())
             gitMessages[h] = msg
 
-gitInfo()
-current_hash = gitMessages.keys()[0]
-
 def getSHA(): 
     return shell('git rev-parse --short HEAD')[0][0].strip()
 
@@ -37,7 +34,7 @@ project_name = 'riscv-isa-sim'
 project_org = 'riscv-mit'
 
 baseURL = 'https://github.com/%s/%s/commit/' % (project_org, project_name)
-baseFileURL = 'https://github.com/%s/%s/blob/master/' % (project_org, project_name)
+base_file_url = 'https://github.com/%s/%s/blob/master/' % (project_org, project_name)
 
 resultsBySHA = collections.OrderedDict()
 resultsBySHA = pickle.load(open('tests.dat'))
@@ -47,19 +44,6 @@ resultsBySHA = pickle.load(open('tests.dat'))
 
 conn = sqlite3.connect('tests.sqlite')
 db = conn.cursor()
-
-def get_overall_rows_for_hash(sha_hash):
-    overall_query = '''SELECT suite, SUM(result), COUNT(result) FROM test_results WHERE githash = ? GROUP BY suite'''
-    s = ''
-    for row in db.execute(overall_query, [sha_hash]):
-        suite, success, total = row
-        print(row)
-        s += '<tr>'
-        s += '<td>' + suite + '</td>'
-        state = 'ok' if success == total else 'fail'
-        s += '<td class="' + state + '">' + str(success) + '/' + str(total)  + '</td>'
-        s += '</tr>'
-    return s
 
 # and now let's convert that output to HTML!
 f = open('output.html', 'w')
@@ -71,12 +55,15 @@ body { font-family: monospace; font-size: 10pt; }
 .negative { background-color: red; color: white }
 .fail { background-color: red; color: white; }
 .category { background-color: black; color: white; vertical-align: bottom }
+.divider { background-color: black; color: white; vertical-align: bottom }
 .state { display: block; }
 .lines { display: none; }
 .cycles { display: none; }
 .linesDelta { display: none; }
 .cyclesDelta { display: none; }
 a .category { color: white}
+a .ok { color: white }
+a .fail { color: white }
 table { border-color: #600; border-width: 1px 1px 1px 1px; border-style: solid; }
 td { border-color: lightgray; border-width: 1px 1px 1px 1px; border-style: solid; }
 </style>
@@ -96,42 +83,75 @@ $(document).ready(function() {
 </script>
 <title>{{project_name}} Test Suite Output</title></head><body><h3>{{project_name}} Test Suite Output</h3>'''
 f.write(s.replace('{{project_name}}', project_name))
-f.write('<table>')
-
-def writeSHAHeaderRow(f, headerText):
-    f.write('<tr class="category"><td>' + headerText + '</td>')
-    for i, h in enumerate(resultsBySHA.keys()):
-        f.write('<td>' + ('HEAD<br/>' if i == len(resultsBySHA.keys()) - 1 else '') + ' <a class="category" href="' + baseURL + h + '" title="' + (gitMessages[h] if h in gitMessages else '') + '">' + h + '</a>' + '</td>')
-    f.write('</tr>')
-
-#writeSHAHeaderRow(f, 'overall')
 
 
-assert(current_hash == getSHA())
-f.write(get_overall_rows_for_hash(current_hash))
+def write_row_for_git_commit(git_hash, git_message, is_head):
+    f.write('<table>')
+    f.write(write_git_header_row(git_hash, git_message, is_head))
+    f.write(get_overall_rows_for_hash(git_hash))
+    f.write(show_all_tests(git_hash))
+    f.write('</table>')
+
+def write_git_header_row(git_hash, git_message, is_head):
+    s = ''
+    s += '<tr class="category">'
+    s += '<td>' + ('HEAD<br/>' if is_head else '') + ' <a class="category" href="' + baseURL + git_hash + '" title="' + (git_message) + '">' + git_hash + '</a>' + '</td>'
+    s += '</tr>'
+    return s
 
 def project_basepath(filename):
     project_dir, ok = shell("git rev-parse --show-toplevel")
-    print project_dir, filename
     return filename.replace(project_dir[0].strip() + '/', '')
 
+def current_dir_basepath(filename):
+    return filename.replace(os.getcwd(), '')
 
+def project_url(filename):
+    return base_file_url + project_basepath(filename)
+
+def get_overall_rows_for_hash(sha_hash):
+    overall_query = '''SELECT suite, policies, SUM(result), COUNT(result) FROM test_results WHERE githash = ? GROUP BY suite, policies'''
+    s = ''
+    s += make_tr(['suite', 'policies', 'results'], row_class = 'divider')
+    for row in db.execute(overall_query, [sha_hash]):
+        suite, policies, success, total = row
+        print(row)
+        s += '<tr>'
+        s += '<td>%s</td><td>%s</td>' % (suite, policies)
+        state = 'ok' if success == total else 'fail'
+        s += '<td class="' + state + '">' + str(success) + '/' + str(total)  + '</td>'
+        s += '</tr>'
+    return s
+    
 divWrap = lambda text, cssclass: '<div class="' + cssclass + '">' + text + '</div>'
+
+def make_tr(items, row_class = ''):
+    return ('<tr class="%s">' % row_class) + ''.join(['<td>%s</td>' % i for i in items]) + '</tr>'
 
 # test by all policy dimensions
 def show_all_tests(sha_hash):
     get_tests = '''SELECT * FROM test_results WHERE githash = ? ORDER BY suite, name, policies DESC'''
     current_suite = None
     s = ''
+    s += make_tr(['suite', 'filename', 'policies', 'result'], row_class = 'divider')
     for row in db.execute(get_tests, [sha_hash]):
-        test_id, name, suite, githash, policies, time_taken, cycles, filesize, output, result = row
+        test_id, name, suite, githash, policies, time_taken, cycles, filesize, output, golden, result = row
         state = 'ok' if result else 'fail'
-        s += '<tr><td>%s</td><td>%s</td><td class="%s">%s</td>' % (suite, name, state, result)
+        s += '<tr><td>%s</td><td>%s</td><td>%s</td><td class="%s"><a class="%s" href="%s">%s</a></td>' % \
+             (suite, project_basepath(name), policies, state, state, current_dir_basepath(golden), state)
         if current_suite != suite:
             current_suite = suite
             # emit row
     return s
 
-f.write(show_all_tests(current_hash))
-f.write('</table></body></html>')
+
+
+gitInfo()
+current_hash = gitMessages.keys()[0]
+assert(current_hash == getSHA())
+
+for k, v in gitMessages.items():
+    write_row_for_git_commit(k, v, k == current_hash)
+
+f.write('</body></html>')
 f.close()

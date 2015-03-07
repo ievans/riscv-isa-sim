@@ -22,7 +22,7 @@ verbose_shell = False
 # files. If they are files, the CC environment variable will be used to compile
 # them. Golden outputs have the same name as the executable file or file they
 # are derived from with the addition of a suffix:
-expected_output_suffix = '.out'
+expected_output_suffix = '.output'
 
 # We assume that executables that are supposed to segfault, return non-zero
 # values, etc., will be handled by a wrapper script that outputs that value in
@@ -35,7 +35,7 @@ expected_output_suffix = '.out'
 
 make_gold = False
 if len(sys.argv) >= 2:
-    make_gold = sys.argv[1] == 'gold'
+    make_gold = (sys.argv[1] == 'gold')
 
 ccompiler = os.environ.get('CC')
 cflags = os.environ.get('CFLAGS')
@@ -50,15 +50,6 @@ linux_environments = [
     'spike +disk=root.bin vmlinux'
 ]
 
-# structure: 
-# table test_results
-# test_id | suite | filename   | githash |  time taken | cycles | filesize | result | output | etc 
-#-------------------------------------------------------------------------------------------------
-# 13      | linux | x/t.c      | cd231  
-
-# tests_to_policies
-# test_id | policy_id
-
 tests = {
           'single-file-tests': [('single-file-tests/bin/riscv', 'single-file-tests', pk_environments)],
           'need_linux': [('need_linux/bin/riscv', 'need_linux', pk_environments)],
@@ -69,6 +60,7 @@ def shell(command):
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = [x for x in p.stdout.readlines()]
     retval = p.wait()
+    if verbose_shell: print '[shell] returned %d, output:\n%s' % (retval, output)
     return output, retval
 
 def getSHA(): 
@@ -77,8 +69,8 @@ def getSHA():
 db = None
 conn = sqlite3.connect('tests.sqlite')
 db = conn.cursor()
-cols = ['id', 'name', 'suite', 'githash', 'policies', 'time_taken', 'cycles', 'filesize', 'output', 'result']
-table_spec = '''%s INTEGER PRIMARY KEY, %s TEXT, %s TEXT, %s TEXT,  %s TEXT, %s INTEGER, %s INTEGER, %s INTEGER, %s TEXT, %s INT''' % tuple(cols)
+cols = ['id', 'name', 'suite', 'githash', 'policies', 'time_taken', 'cycles', 'filesize', 'output', 'golden', 'result']
+table_spec = '''%s INTEGER PRIMARY KEY, %s TEXT, %s TEXT, %s TEXT,  %s TEXT, %s INTEGER, %s INTEGER, %s INTEGER, %s TEXT, %s TEXT, %s INT''' % tuple(cols)
 
 db.execute('CREATE TABLE IF NOT EXISTS test_results (%s)' % table_spec)
 rows = db.execute('SELECT COUNT(*) FROM test_results').fetchone()
@@ -92,14 +84,14 @@ if rows > 0:
         ans = raw_input()
         if ans != 'y' and ans != 'Y':
             sys.exit(0)
-        db.execute('DELETE * FROM test_results WHERE githash = ?', (getSHA(),))
+        db.execute('DELETE FROM test_results WHERE githash = ?', [getSHA()])
 
 def logInstrumentedSuccess(test_data, assemblyFile, cycles):
     # count the number of lines in the output file
     lines = shell('wc -l < ' + assemblyFile)[0][0].strip()
     test_data['cycles'] = cycles
     test_data['filesize'] = lines
-    log(test_data)
+    logSuccess(test_data)
 
 def logSuccess(test_data):
     test_data['result'] = 1
@@ -111,6 +103,7 @@ def logFailure(test_data, message):
     log(test_data)
 
 def log(test_data):
+    assert(test_data['result'] == 0 or test_data['result'] == 1)
     entries = [str(test_data[col]) for col in cols if col != 'id']
     columns = [str(col) for col in cols if col != 'id']
     cmd = 'INSERT INTO test_results(%s) VALUES(%s)' % (str(columns)[1:-1], ('?,'*len(entries))[:-1])
@@ -119,6 +112,10 @@ def log(test_data):
         print '[' + test_data['name'] + '] ' + test_data['output']
 
 root_dir = os.getcwd()
+
+def make_expected_path(outputDir, inputDir, file, suffix, policy_number):
+    return os.path.join(outputDir + directory.replace(inputDir, ''), file + suffix) + '.' + str(policy_number) + '.txt'
+
 for test_name, options in tests.items():
     inputDir, outputDir = map(lambda x: os.path.join(root_dir, x), list(options[0])[0:2])
     policies = list(options[0])[2]
@@ -126,13 +123,14 @@ for test_name, options in tests.items():
 
     for directory, subdirectories, files in os.walk(inputDir):
         for file in files:
-            expected = os.path.join(outputDir, file + expected_output_suffix)
             input =  os.path.join(directory, file)
             binary = tempfile.NamedTemporaryFile()
             output = tempfile.NamedTemporaryFile()
 
-            for policy in policies:
-                test_data = collections.defaultdict(lambda: 'NULL', {'suite': test_name, 'name': input, 'githash': getSHA(), 'policies': policy })
+            for policy_number, policy in enumerate(policies):
+                expected = make_expected_path(outputDir,inputDir, file, expected_output_suffix, policy_number)
+
+                test_data = collections.defaultdict(lambda: 'NULL', {'suite': test_name, 'name': input, 'githash': getSHA(), 'policies': policy, 'golden': expected })
 
                 is_executable = os.access(input, os.X_OK)
                 if ccompiler == None and not is_executable:
