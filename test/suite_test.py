@@ -4,14 +4,16 @@
 
 # ~ a pure python replacement ~
 
+from multiprocessing import Process, Queue
 import collections
 import sqlite3
 import tempfile
 import subprocess
 import sys
 import os
+import time
 
-verbose_shell = False
+verbose_shell = True
 
 # We assume we have compiled a set of executable statements (very generically!
 # could be compiler invocations, program invocations, etc), and we want to
@@ -53,7 +55,7 @@ linux_environments = [
 
 tests = {
           'single-file-tests': [('single-file-tests/bin/riscv', 'single-file-tests', pk_environments)],
-          'need_linux': [('need_linux/bin/riscv', 'need_linux', pk_environments)],
+          'need_linux': [('need_linux/bin/riscv', 'need_linux', linux_environments)],
         }
 
 def shell(command):
@@ -92,30 +94,84 @@ def logInstrumentedSuccess(test_data, assemblyFile, cycles):
     lines = shell('wc -l < ' + assemblyFile)[0][0].strip()
     test_data['cycles'] = cycles
     test_data['filesize'] = lines
-    logSuccess(test_data)
+    return logSuccess(test_data)
 
 def logSuccess(test_data):
     test_data['result'] = 1
-    log(test_data)
+    return log(test_data)
 
 def logFailure(test_data, message):
     test_data['result'] = 0
     test_data['output'] = message
-    log(test_data)
+    return log(test_data)
 
 def log(test_data):
     assert(test_data['result'] == 0 or test_data['result'] == 1)
-    entries = [str(test_data[col]) for col in cols if col != 'id']
-    columns = [str(col) for col in cols if col != 'id']
-    cmd = 'INSERT INTO test_results(%s) VALUES(%s)' % (str(columns)[1:-1], ('?,'*len(entries))[:-1])
-    db.execute(cmd, tuple(entries))
+    entries = [unicode(test_data[col]) for col in cols if col != 'id']
+    columns = [unicode(col) for col in cols if col != 'id']
+    cmd = 'INSERT INTO test_results(%s) VALUES(%s)' % (unicode(columns)[1:-1], ('?,'*len(entries))[:-1])
     if len(test_data['output']) > 0 and type(test_data['output']) == type(''):
         print '[' + test_data['name'] + '] ' + test_data['output']
+    return cmd, tuple(entries)
+
+def store_log(cmd, entries):
+    #print cmd, entries
+    db.execute(cmd, entries)
 
 root_dir = os.getcwd()
 
 def make_expected_path(outputDir, inputDir, file, suffix, policy_number):
     return os.path.join(outputDir + directory.replace(inputDir, ''), file + suffix) + '.' + str(policy_number) + '.txt'
+
+def run_test_job(inputDir, outputDir, test_name, directory, file, policy_number, policy, out_q):
+    out_q.put(run_test(inputDir, outputDir, test_name, directory, file, policy_number, policy))
+
+def run_test(inputDir, outputDir, test_name, directory, file, policy_number, policy):
+    input =  os.path.join(directory, file)
+    binary = tempfile.NamedTemporaryFile()
+    output = tempfile.NamedTemporaryFile()
+    expected = make_expected_path(outputDir,inputDir, file, expected_output_suffix, policy_number)
+
+    test_data = collections.defaultdict(lambda: 'NULL', {'suite': test_name, 'name': input, 'githash': getSHA(), 'policies': policy, 'golden': expected })
+
+    is_executable = os.access(input, os.X_OK)
+    if ccompiler == None and not is_executable:
+        return logFailure(test_data, 'no compiler is defined, but the input file is not executable')
+
+    if ccompiler != None:
+        compiler_call = '%s %s -o %s %s' % (ccompiler, cflags, binary.name, input)
+        error_output, retval = shell(compiler_call)
+        if retval != 0:
+            return logFailure(test_data, 'compiler gave nonzero return code ' + str(retval) + ' for command ' + compiler_call)
+        if len(error_output) > 0:
+            return logFailure(test_data, 'unexpected output ' + ''.join(error_output))
+            
+    # TODO(inevans) support multiple policy types
+    execution_prefix = policy
+
+    # also redirect stderr to stdout (2>&1)
+    exe_call = '%s %s 2>&1 | tee %s' % (execution_prefix, input if is_executable else binary.name, output.name)
+    exe_error, exe_ret_val = shell(exe_call)
+
+    if exe_ret_val != 0:
+        return logFailure(test_data, 'program failed to run (command "%s" returned %d): %s' %
+                   (exe_call, exe_ret_val, ''.join(exe_error)))
+
+    if make_gold:
+        # copy the output to the golden reference
+        diffOutput, diffRetVal = shell('cp %s %s' % (output.name, expected))
+    else:
+        # run diff on the output
+        diffCall = 'diff -u %s %s' % (output.name, expected)
+        diffOutput, diffRetVal = shell(diffCall)
+        if diffRetVal != 0:
+            return logFailure(test_data, 'program output did not match expected output ' + unicode(''.join(diffOutput)))
+
+    cycles = '0'
+    return logInstrumentedSuccess(test_data, output.name, cycles)
+
+out_q = Queue()
+all_jobs = []
 
 for test_name, options in tests.items():
     inputDir, outputDir = map(lambda x: os.path.join(root_dir, x), list(options[0])[0:2])
@@ -124,58 +180,19 @@ for test_name, options in tests.items():
 
     for directory, subdirectories, files in os.walk(inputDir):
         for file in files:
-            input =  os.path.join(directory, file)
-            binary = tempfile.NamedTemporaryFile()
-            output = tempfile.NamedTemporaryFile()
-
             for policy_number, policy in enumerate(policies):
-                expected = make_expected_path(outputDir,inputDir, file, expected_output_suffix, policy_number)
+                job = lambda: run_test_job(inputDir, outputDir, test_name, directory, file, policy_number, policy, out_q)
+                t = Process(target=job)
+                t.start()
+                all_jobs.append(t)
 
-                test_data = collections.defaultdict(lambda: 'NULL', {'suite': test_name, 'name': input, 'githash': getSHA(), 'policies': policy, 'golden': expected })
+for i in range(len(all_jobs)):
+    print '[info] %d of %d jobs done' % (i, len(all_jobs))
+    f = out_q.get()
+    store_log(*f)
 
-                is_executable = os.access(input, os.X_OK)
-                if ccompiler == None and not is_executable:
-                    logFailure(test_data, 'no compiler is defined, but the input file is not executable')
-                    continue
-
-                if ccompiler != None:
-                    compiler_call = '%s %s -o %s %s' % (ccompiler, cflags, binary.name, input)
-                    error_output, retval = shell(compiler_call)
-                    if retval != 0:
-                        logFailure(test_data, 'compiler gave nonzero return code ' + str(retval) + ' for command ' + compiler_call)
-                        continue
-                    if len(error_output) > 0:
-                        logFailure(test_data, 'unexpected output ' + ''.join(error_output))
-                        continue
-
-                # TODO(inevans) support multiple policy types
-                execution_prefix = policy
-
-                # also redirect stderr to stdout (2>&1)
-                exe_call = '%s %s > %s 2>&1' % (execution_prefix, input if is_executable else binary.name, output.name)
-                exe_error, exe_ret_val = shell(exe_call)
-
-                if exe_ret_val != 0:
-                    logFailure(test_data, 'program failed to run (command "%s" returned %d): %s' %
-                               (exe_call, exe_ret_val, ''.join(exe_error)))
-                    continue
-
-                if make_gold:
-                    # copy the output to the golden reference
-                    diffOutput, diffRetVal = shell('cp %s %s' % (output.name, expected))
-                else:
-                    # run diff on the output
-                    diffCall = 'diff -u %s %s' % (output.name, expected)
-                    diffOutput, diffRetVal = shell(diffCall)
-                    if diffRetVal != 0:
-                        logFailure(test_data, 'program output did not match expected output ' + ''.join(diffOutput))
-                        continue
-
-                cycles = '0'
-                logInstrumentedSuccess(test_data, output.name, cycles)
-
-            binary.close()
-            output.close()
+for j in all_jobs:
+    j.join()
 
 print '*'*80
 print 'test suite concluded, run suite-report to see output'

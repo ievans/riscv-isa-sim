@@ -36,12 +36,6 @@ project_org = 'riscv-mit'
 baseURL = 'https://github.com/%s/%s/commit/' % (project_org, project_name)
 base_file_url = 'https://github.com/%s/%s/blob/master/' % (project_org, project_name)
 
-resultsBySHA = collections.OrderedDict()
-resultsBySHA = pickle.load(open('tests.dat'))
-
-# reverse the order of the keys so that the HEAD commit is on the left
-# resultsBySHA = collections.OrderedDict(reversed(resultsBySHA.items()))
-
 conn = sqlite3.connect('tests.sqlite')
 db = conn.cursor()
 

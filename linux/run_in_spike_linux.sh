@@ -8,6 +8,11 @@ fi
 
 # build a new disk
 tmpdir=`mktemp -d`
-./setup_disk.sh $tmpdir/root.bin $1 $1
 
-$SPIKE +disk=$tmpdir/root.bin vmlinux
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in
+SCRIPTDIR=$(dirname "$SCRIPT")
+$SCRIPTDIR/setup_disk.sh $tmpdir/root.bin $1 $1 > /dev/null
+
+echo "disk setup OK, starting $SPIKE"
+timeout --preserve-status --foreground 130 $SPIKE +disk=$tmpdir/root.bin $SCRIPTDIR/vmlinux
