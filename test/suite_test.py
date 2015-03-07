@@ -47,7 +47,8 @@ pk_environments = [
 ]
 
 linux_environments = [
-    'spike +disk=root.bin vmlinux'
+    'SPIKE=spike ../linux/run_in_spike_linux.sh',
+    'SPIKE=spike-no-return-copy pk ../linux/run_in_spike_linux.sh',
 ]
 
 tests = {
@@ -147,7 +148,7 @@ for test_name, options in tests.items():
                         logFailure(test_data, 'unexpected output ' + ''.join(error_output))
                         continue
 
-                # TODO(inevans) support multiple policy types 
+                # TODO(inevans) support multiple policy types
                 execution_prefix = policy
 
                 # also redirect stderr to stdout (2>&1)
