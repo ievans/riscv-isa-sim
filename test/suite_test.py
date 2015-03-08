@@ -50,7 +50,7 @@ pk_environments = [
 
 linux_environments = [
     'SPIKE=spike ../linux/run_in_spike_linux.sh',
-    'SPIKE=spike-no-return-copy pk ../linux/run_in_spike_linux.sh',
+    'SPIKE=spike-no-return-copy ../linux/run_in_spike_linux.sh',
 ]
 
 tests = {
@@ -61,7 +61,7 @@ tests = {
 def shell(command):
     if verbose_shell: print '[shell]', command
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output = [x for x in p.stdout.readlines()]
+    output = [x.decode('ascii', 'ignore') for x in p.stdout.readlines()]
     retval = p.wait()
     if verbose_shell: print '[shell] returned %d, output:\n%s' % (retval, output)
     return output, retval
@@ -110,8 +110,8 @@ def log(test_data):
     entries = [unicode(test_data[col]) for col in cols if col != 'id']
     columns = [unicode(col) for col in cols if col != 'id']
     cmd = 'INSERT INTO test_results(%s) VALUES(%s)' % (unicode(columns)[1:-1], ('?,'*len(entries))[:-1])
-    if len(test_data['output']) > 0 and type(test_data['output']) == type(''):
-        print '[' + test_data['name'] + '] ' + test_data['output']
+    #if len(test_data['output']) > 0 and type(test_data['output']) == type(''):
+    print '[' + test_data['name'] + '] ' + str(test_data['result'])
     return cmd, tuple(entries)
 
 def store_log(cmd, entries):
@@ -165,7 +165,8 @@ def run_test(inputDir, outputDir, test_name, directory, file, policy_number, pol
         diffCall = 'diff -u %s %s' % (output.name, expected)
         diffOutput, diffRetVal = shell(diffCall)
         if diffRetVal != 0:
-            return logFailure(test_data, 'program output did not match expected output ' + unicode(''.join(diffOutput)))
+            jout = u''.join([x.encode('ascii','ignore') for x in diffOutput])
+            return logFailure(test_data, 'program output did not match expected output ' + jout)
 
     cycles = '0'
     return logInstrumentedSuccess(test_data, output.name, cycles)
