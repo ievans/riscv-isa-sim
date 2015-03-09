@@ -78,6 +78,7 @@ void sim_t::interactive()
     funcs["fregd"] = &sim_t::interactive_fregd;
     funcs["mem"] = &sim_t::interactive_mem;
     funcs["memt"] = &sim_t::interactive_mem_t;
+    funcs["dump"] = &sim_t::interactive_dump;
     funcs["pc"] = &sim_t::interactive_pc;
     funcs["str"] = &sim_t::interactive_str;
     funcs["until"] = &sim_t::interactive_until;
@@ -232,9 +233,8 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
     addr_str = args[1];
   }
 
-  reg_t addr = strtol(addr_str.c_str(),NULL,16), val;
-  if(addr == LONG_MAX)
-    addr = strtoul(addr_str.c_str(),NULL,16);
+  reg_t addr = parse_addr(addr_str);
+  reg_t val;
 
   switch(addr % 8)
   {
@@ -255,6 +255,13 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
   return val;
 }
 
+reg_t sim_t::parse_addr(std::string addr_str) {
+  reg_t addr = strtol(addr_str.c_str(),NULL,16);
+  if(addr == LONG_MAX)
+    addr = strtoul(addr_str.c_str(),NULL,16);
+  return addr;
+}
+
 tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
 {
   if(args.size() != 1 && args.size() != 2)
@@ -271,10 +278,8 @@ tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
     addr_str = args[1];
   }
 
-  reg_t addr = strtol(addr_str.c_str(),NULL,16);
+  reg_t addr = parse_addr(addr_str);
   tagged_reg_t val;
-  if(addr == LONG_MAX)
-    addr = strtoul(addr_str.c_str(),NULL,16);
 
   switch(addr % 8)
   {
@@ -295,6 +300,38 @@ tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
   return val;
 }
 
+#define DUMP_SIZE 16 // in words
+tagged_reg_t dump_buffer[DUMP_SIZE];
+reg_t dump_addr;
+tagged_reg_t* sim_t::get_dump_tagged(const std::vector<std::string>& args)
+{
+  if(args.size() != 1 && args.size() != 2)
+    throw trap_illegal_instruction();
+
+  std::string addr_str = args[0];
+  mmu_t* mmu = debug_mmu;
+  if(args.size() == 2)
+  {
+    int p = atoi(args[0].c_str());
+    if(p >= (int)num_cores())
+      throw trap_illegal_instruction();
+    mmu = procs[p]->get_mmu();
+    addr_str = args[1];
+  }
+
+  reg_t addr = parse_addr(addr_str);
+
+  if(addr % 8 != 0) {
+    return NULL;
+  }
+  int i;
+  for(i = 0; i < DUMP_SIZE; i++) {
+    dump_buffer[i] = mmu->load_tagged_uint64(addr + 8*i);
+  }
+  dump_addr = addr;
+  return dump_buffer;
+}
+
 void sim_t::interactive_mem(const std::string& cmd, const std::vector<std::string>& args)
 {
   fprintf(stderr, "0x%016" PRIx64 "\n", get_mem(args));
@@ -304,6 +341,29 @@ void sim_t::interactive_mem_t(const std::string& cmd, const std::vector<std::str
 {
   tagged_reg_t contents = get_mem_tagged(args);
   fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
+}
+
+#define DUMP_WIDTH 2
+void sim_t::interactive_dump(const std::string& cmd, const std::vector<std::string>& args)
+{
+  tagged_reg_t *contents = get_dump_tagged(args);
+  reg_t addr = dump_addr;
+  if(contents != NULL) {
+    int i, j;
+    for(i = 0; i < DUMP_SIZE / DUMP_WIDTH; i++) {
+      fprintf(stderr, "0x%016" PRIx64 ": ", addr + 8 * DUMP_WIDTH * i);
+      for(j = 0; j < DUMP_WIDTH; j++) {
+        int k = DUMP_WIDTH * i + j;
+        if(j > 0) {
+          fprintf(stderr, "    ");
+        }
+        fprintf(stderr, "0x%016" PRIx64 " 0x%04x", contents[k].val, contents[k].tag);
+      }
+      fprintf(stderr, "\n");
+    }
+  } else {
+    fprintf(stderr, "Error: dump requires 64-bit aligned address\n");
+  }
 }
 
 void sim_t::interactive_str(const std::string& cmd, const std::vector<std::string>& args)
