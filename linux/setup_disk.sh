@@ -57,5 +57,6 @@ sudo umount mnt
 rm -rf mnt/
 echo "Configuration complete"
 echo "Copying "$tmpdir"/root.bin to "$1""
+cd $LINUX_ROOT
 cp -v $tmpdir/root.bin $1
-echo "Run spike +disk="$tmpdir"/root.bin vmlinux"
+echo "Run spike +disk="$1"/root.bin vmlinux"
