@@ -77,6 +77,7 @@ void sim_t::interactive()
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
     funcs["mem"] = &sim_t::interactive_mem;
+    funcs["memt"] = &sim_t::interactive_mem_t;
     funcs["str"] = &sim_t::interactive_str;
     funcs["until"] = &sim_t::interactive_until;
     funcs["while"] = &sim_t::interactive_until;
@@ -248,9 +249,55 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
   return val;
 }
 
+tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
+{
+  if(args.size() != 1 && args.size() != 2)
+    throw trap_illegal_instruction();
+
+  std::string addr_str = args[0];
+  mmu_t* mmu = debug_mmu;
+  if(args.size() == 2)
+  {
+    int p = atoi(args[0].c_str());
+    if(p >= (int)num_cores())
+      throw trap_illegal_instruction();
+    mmu = procs[p]->get_mmu();
+    addr_str = args[1];
+  }
+
+  reg_t addr = strtol(addr_str.c_str(),NULL,16);
+  tagged_reg_t val;
+  if(addr == LONG_MAX)
+    addr = strtoul(addr_str.c_str(),NULL,16);
+
+  switch(addr % 8)
+  {
+    case 0:
+      val = mmu->load_tagged_uint64(addr);
+      break;
+    case 4:
+      val = mmu->load_tagged_uint32(addr);
+      break;
+    case 2:
+    case 6:
+      val = mmu->load_tagged_uint16(addr);
+      break;
+    default:
+      val = mmu->load_tagged_uint8(addr);
+      break;
+  }
+  return val;
+}
+
 void sim_t::interactive_mem(const std::string& cmd, const std::vector<std::string>& args)
 {
   fprintf(stderr, "0x%016" PRIx64 "\n", get_mem(args));
+}
+
+void sim_t::interactive_mem_t(const std::string& cmd, const std::vector<std::string>& args)
+{
+  tagged_reg_t contents = get_mem_tagged(args);
+  fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
 }
 
 void sim_t::interactive_str(const std::string& cmd, const std::vector<std::string>& args)
