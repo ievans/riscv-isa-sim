@@ -1,6 +1,11 @@
 # stop if any command returns nonzero
 set -e
 
+if [[ $# -eq 0 ]] ; then
+    echo "setup_disk.sh: missing output disk image name"
+    echo "usage: setup_disk.sh <output disk image name> [directory to copy into root of image] [path to executable to run on init] "
+fi
+
 # if this script is called in parallel, it will need a lot of loop devices
 #for i in {8..100};
 #do
