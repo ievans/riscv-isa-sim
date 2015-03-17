@@ -34,6 +34,13 @@ echo "Initializing disk image"
 mkdir -p bin etc dev lib proc sbin tmp usr usr/bin usr/lib usr/sbin riscv_tests
 cp -v $LINUX_ROOT/busybox-1.21.1/busybox bin
 cp -v $LINUX_ROOT/inittab etc/
+
+if [ -f $LINUX_ROOT/bash-4.3.30/bash ];
+then
+  cp -v $LINUX_ROOT/inittab_bash etc/inittab
+  cp -v $LINUX_ROOT/bash-4.3.30/bash bin/
+fi
+
 ln -s /bin/busybox sbin/init
 
 RISCV_BIN="$(which riscv64-unknown-linux-gnu-gcc)"
