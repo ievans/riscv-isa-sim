@@ -37,17 +37,13 @@ void* malloc_tagged(size_t size, bool is_fptr) {
   if (is_fptr) {
     __asm__ __volatile__ (
       "settag %0, 2\n\t"
-      "sd %0, -24(s0)\n\t"
-      "fence" // req'd only with mult. threads on this ptr
-      :: "r"(mem)
-       : "memory");
+      : "=r"(mem)
+      : "r"(mem));
   } else {
     __asm__ __volatile__ (
       "settag %0, 1\n\t"
-      "sd %0, -24(s0)\n\t"
-      "fence" // req'd only with mult. threads on this ptr
-      :: "r"(mem)
-       : "memory");
+      : "=r"(mem)
+      : "r"(mem));
   }
 #else
   printf(NOT_AVAILABLE);
