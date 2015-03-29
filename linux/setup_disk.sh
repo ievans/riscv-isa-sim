@@ -19,13 +19,13 @@ LINUX_ROOT=$(dirname "$SCRIPT")
 
 tmpdir=`mktemp -d` && cd $tmpdir
 echo "Creating disk image: root.bin in temporary dir: $tmpdir"
-rm -f root.bin
+rm -f --preserve-root root.bin
 dd if=/dev/zero of=root.bin bs=1M count=64
 sudo mkfs.ext2 -F root.bin
 
 echo "Mounting disk image"
 
-rm -rf mnt/
+rm -rf --preserve-root mnt/
 mkdir mnt
 sudo mount -o loop root.bin mnt
 sudo chown $USER mnt/
@@ -66,9 +66,10 @@ fi
 cd ..
 echo "Unmounting directory"
 sudo umount mnt
-rm -rf mnt/
+rm -rf --preserve-root mnt/
 echo "Configuration complete"
 echo "Copying "$tmpdir"/root.bin to "$1""
 cd $LINUX_ROOT
 cp -v $tmpdir/root.bin $1
+rm -rf --preserve-root $tmpdir
 echo "Run spike +disk="$1"/root.bin vmlinux"
