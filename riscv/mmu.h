@@ -173,6 +173,7 @@ public:
   void flush_icache();
 
   void register_memtracer(memtracer_t*);
+  void print_memtracer();
 
 private:
   char* mem;

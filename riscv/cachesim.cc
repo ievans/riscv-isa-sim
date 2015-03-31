@@ -98,6 +98,12 @@ void cache_sim_t::print_stats()
   std::cout << "Writebacks:            " << writebacks << std::endl;
   std::cout << name << " ";
   std::cout << "Miss Rate:             " << mr << '%' << std::endl;
+  std::cout << std::endl;
+
+  if(miss_handler) {
+    std::cout << name << " Miss Handler:" << std::endl;
+    miss_handler->print_stats();
+  }
 }
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)

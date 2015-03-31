@@ -70,6 +70,7 @@ void sim_t::interactive()
     typedef void (sim_t::*interactive_func)(const std::string&, const std::vector<std::string>&);
     std::map<std::string,interactive_func> funcs;
 
+    funcs["c"] = &sim_t::interactive_run_silent;
     funcs["r"] = &sim_t::interactive_run_noisy;
     funcs["rs"] = &sim_t::interactive_run_silent;
     funcs["reg"] = &sim_t::interactive_reg;
@@ -84,6 +85,7 @@ void sim_t::interactive()
     funcs["until"] = &sim_t::interactive_until;
     funcs["while"] = &sim_t::interactive_until;
     funcs["q"] = &sim_t::interactive_quit;
+    funcs["stats"] = &sim_t::interactive_cachestats;
 
     try
     {
@@ -364,6 +366,19 @@ void sim_t::interactive_dump(const std::string& cmd, const std::vector<std::stri
   } else {
     fprintf(stderr, "Error: dump requires 64-bit aligned address\n");
   }
+}
+
+void sim_t::interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args) {
+  int p = 0;
+  if(args.size() >= 1)
+    p = atoi(args[0].c_str());
+
+  // Get the mmu
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu();
+
+  mmu->print_memtracer();
 }
 
 void sim_t::interactive_str(const std::string& cmd, const std::vector<std::string>& args)

@@ -69,6 +69,7 @@ private:
   void interactive_dump(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_str(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_until(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args);
   reg_t get_reg(const std::vector<std::string>& args);
   tagged_reg_t get_reg_tagged(const std::vector<std::string>& args);
   reg_t get_freg(const std::vector<std::string>& args);

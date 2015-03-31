@@ -124,3 +124,8 @@ void mmu_t::register_memtracer(memtracer_t* t)
   flush_tlb();
   tracer.hook(t);
 }
+
+void mmu_t::print_memtracer()
+{
+  tracer.print_stats();
+}
