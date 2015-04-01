@@ -81,6 +81,7 @@ void sim_t::interactive()
     funcs["memt"] = &sim_t::interactive_mem_t;
     funcs["dump"] = &sim_t::interactive_dump;
     funcs["pc"] = &sim_t::interactive_pc;
+    funcs["asm"] = &sim_t::interactive_asm;
     funcs["str"] = &sim_t::interactive_str;
     funcs["until"] = &sim_t::interactive_until;
     funcs["while"] = &sim_t::interactive_until;
@@ -124,6 +125,41 @@ void sim_t::interactive_quit(const std::string& cmd, const std::vector<std::stri
 void sim_t::interactive_pc(const std::string& cmd, const std::vector<std::string>& args)
 {
    fprintf(stderr, "0x%016" PRIx64 "\n", get_pc(args));
+}
+
+#define ASM_SIZE 16
+void sim_t::interactive_asm(const std::string& cmd, const std::vector<std::string>& args) {
+  int p = 0;
+  if(args.size() >= 1) {
+    p = atoi(args[0].c_str());
+  }
+  if(p >= (int)num_cores()) {
+    throw trap_illegal_instruction();
+  }
+
+  processor_t *proc = procs[p];
+  mmu_t *mmu = proc->get_mmu();
+  disassembler_t* disassembler = proc->get_disassembler();
+
+  reg_t pc = 0;
+  if(args.size() >= 2 && strcmp(args[1].c_str(), "pc") != 0) {
+    pc = parse_addr(args[1]);
+  } else {
+    pc = proc->state.pc;
+  }
+
+  int n = ASM_SIZE;
+  if(args.size() >= 3) {
+    n = atoi(args[2].c_str());
+  }
+
+  for(int i = 0; i < n; i++) {
+    insn_fetch_t fetch = mmu->load_insn(pc);
+    uint64_t bits = fetch.insn.bits() & ((1ULL << (8 * insn_length(fetch.insn.bits()))) - 1);
+    fprintf(stderr, "%3d: 0x%016" PRIx64 " (0x%08" PRIx64 ") %s\n",
+          p, pc, bits, disassembler->disassemble(fetch.insn).c_str());
+    pc += 4;
+  }
 }
 
 reg_t sim_t::get_pc(const std::vector<std::string>& args)

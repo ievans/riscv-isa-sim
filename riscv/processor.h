@@ -83,6 +83,7 @@ public:
   void set_interrupt(int which, bool on);
   reg_t get_pcr(int which);
   mmu_t* get_mmu() { return mmu; }
+  disassembler_t* get_disassembler() { return disassembler; }
   state_t* get_state() { return &state; }
   extension_t* get_extension() { return ext; }
   void yield_load_reservation() { state.load_reservation = (reg_t)-1; }
