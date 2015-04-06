@@ -96,6 +96,8 @@ int main(int argc, char** argv)
 
   if (ic && l2) ic->set_miss_handler(&*l2);
   if (dc && l2) dc->set_miss_handler(&*l2);
+  if (ic) s.get_debug_mmu()->register_memtracer(&*ic);
+  if (dc) s.get_debug_mmu()->register_memtracer(&*dc);
   for (size_t i = 0; i < nprocs; i++)
   {
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);

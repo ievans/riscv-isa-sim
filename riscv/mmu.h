@@ -174,6 +174,7 @@ public:
 
   void register_memtracer(memtracer_t*);
   void print_memtracer();
+  void reset_memtracer();
 
 private:
   char* mem;

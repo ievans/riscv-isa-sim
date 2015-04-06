@@ -32,6 +32,21 @@ class cache_sim_t
 
   static cache_sim_t* construct(const char* config, const char* name);
 
+  void reset() {
+    read_accesses = 0;
+    read_misses = 0;
+    bytes_read = 0;
+    write_accesses = 0;
+    write_misses = 0;
+    bytes_written = 0;
+    writebacks = 0;
+
+    memset(tags, 0, sizeof(uint64_t) * sets*ways);
+
+    if(miss_handler)
+      miss_handler->reset();
+  }
+
  protected:
   static const uint64_t VALID = 1ULL << 63;
   static const uint64_t DIRTY = 1ULL << 62;
@@ -90,6 +105,9 @@ class cache_memtracer_t : public memtracer_t
   }
   void print_stats() {
     cache->print_stats();
+  }
+  void reset() {
+    cache->reset();
   }
 
  protected:

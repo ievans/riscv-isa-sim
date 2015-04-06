@@ -26,6 +26,7 @@ public:
   void set_histogram(bool value);
   void set_procs_debug(bool value);
   htif_isasim_t* get_htif() { return htif.get(); }
+  mmu_t* get_debug_mmu() { return debug_mmu; }
 
   // deliver an IPI to a specific processor
   void send_ipi(reg_t who);
@@ -73,6 +74,7 @@ private:
   void interactive_str(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_until(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_cachereset(const std::string& cmd, const std::vector<std::string>& args);
   reg_t get_reg(const std::vector<std::string>& args);
   tagged_reg_t get_reg_tagged(const std::vector<std::string>& args);
   void write_reg(const std::vector<std::string>& args);

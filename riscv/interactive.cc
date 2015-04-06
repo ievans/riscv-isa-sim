@@ -89,6 +89,7 @@ void sim_t::interactive()
     funcs["while"] = &sim_t::interactive_until;
     funcs["q"] = &sim_t::interactive_quit;
     funcs["stats"] = &sim_t::interactive_cachestats;
+    funcs["reset"] = &sim_t::interactive_cachereset;
 
     try
     {
@@ -475,6 +476,20 @@ void sim_t::interactive_cachestats(const std::string& cmd, const std::vector<std
   mmu_t* mmu = procs[p]->get_mmu();
 
   mmu->print_memtracer();
+}
+
+void sim_t::interactive_cachereset(const std::string& cmd, const std::vector<std::string>& args) {
+  int p = 0;
+  if(args.size() >= 1)
+    p = atoi(args[0].c_str());
+
+  // Get the mmu
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu();
+
+  mmu->reset_memtracer();
+  fprintf(stderr, "Caches have been reset.\n");
 }
 
 void sim_t::interactive_str(const std::string& cmd, const std::vector<std::string>& args)

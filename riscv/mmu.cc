@@ -129,3 +129,8 @@ void mmu_t::print_memtracer()
 {
   tracer.print_stats();
 }
+
+void mmu_t::reset_memtracer()
+{
+  tracer.reset();
+}
