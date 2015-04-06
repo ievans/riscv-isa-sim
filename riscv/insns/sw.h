@@ -2,7 +2,7 @@ reg_t tag = TAG_S2;
 // If we're storing the return address into memory...
 #ifdef TAG_POLICY_NO_RETURN_COPY
 if ((TAG_ENFORCE_ON)
-  && (insn.rs2() == RETURN_REGISTER)
+  && (insn.rs2() == RETURN_REGISTER) && (!IS_SUPERVISOR)
 )
 {
   // ensure we have one live PC tag by
