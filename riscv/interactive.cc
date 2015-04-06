@@ -75,6 +75,8 @@ void sim_t::interactive()
     funcs["rs"] = &sim_t::interactive_run_silent;
     funcs["reg"] = &sim_t::interactive_reg;
     funcs["regt"] = &sim_t::interactive_reg_t;
+    funcs["wreg"] = &sim_t::interactive_wreg;
+    funcs["wregt"] = &sim_t::interactive_wreg_t;
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
     funcs["mem"] = &sim_t::interactive_mem;
@@ -189,7 +191,6 @@ reg_t sim_t::get_reg(const std::vector<std::string>& args)
   return procs[p]->state.XPR[r];
 }
 
-
 tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
 {
   if(args.size() != 2)
@@ -206,6 +207,42 @@ tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
   tr.val = procs[p]->state.XPR[r];
   tr.tag = procs[p]->state.XPR.read_tag(r);
   return tr;
+}
+
+void sim_t::write_reg(const std::vector<std::string>& args)
+{
+  if (args.size() != 3)
+    throw trap_illegal_instruction();
+
+  int p = atoi(args[0].c_str());
+  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
+  if (r == NXPR)
+    r = atoi(args[1].c_str());
+  if (p >= (int)num_cores() || r >= NXPR)
+    throw trap_illegal_instruction();
+
+  // convert value to reg_t
+  reg_t value = parse_addr(args[2]);
+  
+  procs[p]->state.XPR.write(r, value);
+}
+
+void sim_t::write_reg_t(const std::vector<std::string>& args)
+{
+  if (args.size() != 3)
+    throw trap_illegal_instruction();
+
+  int p = atoi(args[0].c_str());
+  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
+  if (r == NXPR)
+    r = atoi(args[1].c_str());
+  if (p >= (int)num_cores() || r >= NXPR)
+    throw trap_illegal_instruction();
+
+  // convert tag value to tag_t
+  tag_t value = parse_tag(args[2]);
+
+  procs[p]->state.XPR.write_tag(r, value);
 }
 
 reg_t sim_t::get_freg(const std::vector<std::string>& args)
@@ -232,6 +269,18 @@ void sim_t::interactive_reg_t(const std::string& cmd, const std::vector<std::str
 {
   tagged_reg_t contents = get_reg_tagged(args);
   fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
+}
+
+void sim_t::interactive_wreg(const std::string& cmd, const std::vector<std::string>& args)
+{
+  write_reg(args);
+  fprintf(stderr, "Write success\n");
+}
+
+void sim_t::interactive_wreg_t(const std::string& cmd, const std::vector<std::string>& args)
+{
+  write_reg_t(args);
+  fprintf(stderr, "Tag write success\n");
 }
 
 union fpr
@@ -298,6 +347,17 @@ reg_t sim_t::parse_addr(std::string addr_str) {
   if(addr == LONG_MAX)
     addr = strtoul(addr_str.c_str(),NULL,16);
   return addr;
+}
+
+tag_t sim_t::parse_tag(std::string tag_str) {
+  reg_t parsed_tag = parse_addr(tag_str);
+  
+  // check for overflow
+  tag_t tag = (tag_t) parsed_tag;
+  if (parsed_tag > std::numeric_limits<tag_t>::max())
+    fprintf(stderr, "Tag 0x%016" PRIx64 " overflowed,"
+            " interpreting as 0x%016" PRIu8 "\n", parsed_tag, tag);
+  return tag;
 }
 
 tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)

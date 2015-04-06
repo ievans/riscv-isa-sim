@@ -63,6 +63,8 @@ private:
   void interactive_asm(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_reg(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_reg_t(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_wreg(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_wreg_t(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_fregs(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_fregd(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_mem(const std::string& cmd, const std::vector<std::string>& args);
@@ -73,8 +75,11 @@ private:
   void interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args);
   reg_t get_reg(const std::vector<std::string>& args);
   tagged_reg_t get_reg_tagged(const std::vector<std::string>& args);
+  void write_reg(const std::vector<std::string>& args);
+  void write_reg_t(const std::vector<std::string>& args);
   reg_t get_freg(const std::vector<std::string>& args);
   reg_t parse_addr(std::string addr_str);
+  tag_t parse_tag(std::string tag_str);
   reg_t get_mem(const std::vector<std::string>& args);
   tagged_reg_t get_mem_tagged(const std::vector<std::string>& args);
   tagged_reg_t* get_dump_tagged(const std::vector<std::string>& args);
