@@ -30,8 +30,8 @@ void a() {
 	// Set the return address of a() to be the address of fake syscall
 	uint64_t addr = (uint64_t) &fake_syscall;
 	#define RA_OFFSET 56
-	for(i = RA_OFFSET; i < RA_OFFSET + 8; i++)
-		x[i] = (addr >> 8 * (i - 32)) & 0xff;
+	for(i = 0; i < 8; i++)
+		x[RA_OFFSET + i] = (addr >> 8 * i) & 0xff;
 	// Also overflow a and b
 	str1 = (uint32_t*) (x + RA_OFFSET + 4);
 	str2 = str1 + 4;
