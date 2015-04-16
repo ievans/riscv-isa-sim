@@ -86,6 +86,7 @@ void sim_t::interactive()
     funcs["asm"] = &sim_t::interactive_asm;
     funcs["str"] = &sim_t::interactive_str;
     funcs["until"] = &sim_t::interactive_until;
+    funcs["untilnot"] = &sim_t::interactive_untilnot;
     funcs["while"] = &sim_t::interactive_until;
     funcs["q"] = &sim_t::interactive_quit;
     funcs["stats"] = &sim_t::interactive_cachestats;
@@ -558,6 +559,70 @@ void sim_t::interactive_until(const std::string& cmd, const std::vector<std::str
         tagged_reg_t current = (this->*func_t)(args2);
 
         if (cmd_until == (current.tag == val))
+          break;
+        if (ctrlc_pressed)
+          break;
+      }
+      catch (trap_t t) {}
+
+      set_procs_debug(false);
+      step(1);
+    }
+  }
+}
+
+void sim_t::interactive_untilnot(const std::string& cmd, const std::vector<std::string>& args)
+{
+  bool cmd_untilnot = cmd == "untilnot";
+
+  if(args.size() < 3)
+    return;
+
+  reg_t val = strtol(args[args.size()-1].c_str(),NULL,16);
+  if(val == LONG_MAX)
+    val = strtoul(args[args.size()-1].c_str(),NULL,16);
+  
+  std::vector<std::string> args2;
+  args2 = std::vector<std::string>(args.begin()+1,args.end()-1);
+
+  // returns reg_t
+  auto func = args[0] == "reg"  ? &sim_t::get_reg :
+    args[0] == "pc"   ? &sim_t::get_pc :
+    args[0] == "mem"  ? &sim_t::get_mem :
+    NULL;
+
+  // returns tagged_reg_t
+  auto func_t = args[0] == "regt" ? &sim_t::get_reg_tagged :
+    args[0] == "memt" ? &sim_t::get_mem_tagged :
+    NULL;
+
+  if (func == NULL && func_t == NULL)
+    return;
+
+  ctrlc_pressed = false;
+
+  // loop on test returning reg_t
+  if (func != NULL) {
+    while (1) {
+      try {
+        reg_t current = (this->*func)(args2);
+
+        if (cmd_untilnot == (current != val))
+          break;
+        if (ctrlc_pressed)
+          break;
+      }
+      catch (trap_t t) {}
+
+      set_procs_debug(false);
+      step(1);
+    }
+  } else if (func_t != NULL) { // loop on test returning tagged_reg_t
+    while (1) {
+      try {
+        tagged_reg_t current = (this->*func_t)(args2);
+
+        if (cmd_untilnot == (current.tag != val))
           break;
         if (ctrlc_pressed)
           break;

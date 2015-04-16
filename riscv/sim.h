@@ -73,6 +73,7 @@ private:
   void interactive_dump(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_str(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_until(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_untilnot(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_cachereset(const std::string& cmd, const std::vector<std::string>& args);
   reg_t get_reg(const std::vector<std::string>& args);
