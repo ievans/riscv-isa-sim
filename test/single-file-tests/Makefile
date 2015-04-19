@@ -1,6 +1,11 @@
 # thank you SO http://stackoverflow.com/questions/14589614/make-recursive-all-c-files
 
-CC = riscv64-unknown-elf-gcc
+
+SHELL := /bin/bash
+PATH := $(PWD)/env:$(PATH)
+
+CCCLANG = riscv-clang
+CC = export PATH=$(RISCV)/bin:$(PATH) && riscv64-unknown-elf-gcc
 NATIVECC = gcc
 
 SOURCES=$(shell find . -type f -iname '*.c')
@@ -14,10 +19,13 @@ all: $(BINARIES)
 #$(TARGET) : $(BINARIES)
 #	$(CC) $^ -o $@
 
+
 %: %.c
 	mkdir -p bin/riscv/`dirname $@`
+	mkdir -p bin/riscv-clang/`dirname $@`
 	mkdir -p bin/native/`dirname $@`
 	$(CC) $(CFLAGS) $^ -o bin/riscv/$@
+	$(CCCLANG) $(CFLAGS) $^ -o bin/riscv-clang/$@
 	$(NATIVECC) $(CFLAGS) $^ -o bin/native/$@
 
 clean:

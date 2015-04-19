@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# clang will automatically invoke GCC, but we need to make sure it finds the magic-gcc which
+# ignores the riscv argument
+# so make sure magic gcc is on the path
+echo "bololololololololol"
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in
+SCRIPTDIR=$(dirname "$SCRIPT")
+export PATH=$SCRIPTDIR/env2:$PATH
+echo $PATH
+clang -O1 -target riscv -mriscv=RV64IAMFD -Xclang -load -Xclang /usr/local/lib/HelloIne.so $@

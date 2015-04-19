@@ -1,0 +1,13 @@
+#!/bin/bash
+
+ARGS=''
+for var in "$@"; do
+    # Ignore known bad arguments
+    if [ "$var" = '-mriscv=RV64IAMFD' ]; then
+        continue
+    fi
+    ARGS="$ARGS $var"
+done
+
+echo $ARGS
+$RISCV/bin/riscv64-unknown-elf-gcc $ARGS
