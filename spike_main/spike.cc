@@ -4,6 +4,7 @@
 #include "htif.h"
 #include "cachesim.h"
 #include "extension.h"
+#include "watchloc.h"
 #include <dlfcn.h>
 #include <fesvr/option_parser.h>
 #include <stdio.h>
@@ -24,6 +25,7 @@ static void help()
   fprintf(stderr, "  -d                 Interactive debug mode\n");
   fprintf(stderr, "  -g                 Track histogram of PCs\n");
   fprintf(stderr, "  -h                 Print this help message\n");
+  fprintf(stderr, "  -t                 Turn on memory location watching\n");
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>     B both powers of 2).\n");
@@ -51,7 +53,7 @@ int main(int argc, char** argv)
            "disabled");
 #endif
     printf("\tTAG_POLICY_FP: %s\n", 
-#if defined(TAG_POLICY_FP) 
+#if defined(TAG_POLICY_FP_TAGS) 
            "enabled");
 #else
            "disabled");
@@ -64,6 +66,7 @@ int main(int argc, char** argv)
   bool histogram = false;
   size_t nprocs = 1;
   size_t mem_mb = 0;
+  bool wl_on = false;
   std::unique_ptr<icache_sim_t> ic;
   std::unique_ptr<dcache_sim_t> dc;
   std::unique_ptr<cache_sim_t> l2;
@@ -75,6 +78,7 @@ int main(int argc, char** argv)
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
+  parser.option('t', 0, 0, [&](const char* s){wl_on = true;});
   parser.option('m', 0, 1, [&](const char* s){mem_mb = atoi(s);});
   parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
   parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
@@ -100,6 +104,10 @@ int main(int argc, char** argv)
   if (dc) s.get_debug_mmu()->register_memtracer(&*dc);
   for (size_t i = 0; i < nprocs; i++)
   {
+    if (wl_on) {
+      watch_loc* wl = new watch_loc(s.get_core(i)->get_state());
+      s.get_core(i)->get_mmu()->set_watch_loc(wl);
+    }
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
     if (extension) s.get_core(i)->register_extension(extension());
