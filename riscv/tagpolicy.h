@@ -54,8 +54,9 @@ void print_tag_policy() {
 }
 */
 
-#ifdef TAG_POLICY_NO_RETURN_COPY
 #define CLEAR_PC_TAG(tag) 0
+
+#ifdef TAG_POLICY_NO_RETURN_COPY
 #define CLEAR_TAG(reg, tag) WRITE_REG_TAG(reg, CLEAR_PC_TAG(tag))
 #endif // TAG_POLICY_NO_RETURN_COPY
 

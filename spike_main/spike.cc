@@ -56,6 +56,12 @@ int main(int argc, char** argv)
 #else
            "disabled");
 #endif
+    printf("\tTAG_POLICY_NO_PARTIAL_COPY: %s\n",
+#if defined(TAG_POLICY_NO_PARTIAL_COPY)
+           "enabled");
+#else
+           "disabled");
+#endif
 
 
 

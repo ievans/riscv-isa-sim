@@ -11,4 +11,8 @@ if ((TAG_ENFORCE_ON)
 }
 #endif
 
+#ifdef TAG_POLICY_NO_PARTIAL_COPY
+tag = CLEAR_PC_TAG(tag);
+#endif
+
 MMU.store_tagged_uint16(RS1 + insn.s_imm(), RS2, tag);
