@@ -36,12 +36,10 @@ void memtracer_list_t::get_all_caches() {
 
 }
 
-void memtracer_list_t::update_page() {
+void memtracer_list_t::update_stats(cache_info_t* cache_info) {
   get_all_caches();
   uint32_t ind = 0;
   void *tmp;
-
-  cache_info_t *cache_info = &page_buf.cache_info;
 
   cache_info->n_caches = cache_buf.size();
 

@@ -21,7 +21,7 @@ riscv_hdrs = \
 	rocc.h \
 	insn_template.h \
 	mulhi.h \
-	cachelib.h \
+	libspike.h \
 
 riscv_precompiled_hdrs = \
 	insn_template.h \

@@ -8,6 +8,7 @@ mmu_t::mmu_t(char* _mem, char* _tagmem, size_t _memsz)
  : mem(_mem), tagmem(_tagmem), memsz(_memsz), proc(NULL)
 {
   flush_tlb();
+  init_libspike();
 }
 
 mmu_t::~mmu_t()
@@ -28,6 +29,20 @@ void mmu_t::flush_tlb()
 
   flush_icache();
 }
+
+void mmu_t::init_libspike() {
+  libspike_funcs.push_back(&mmu_t::reset_caches);
+  libspike_funcs.push_back(&mmu_t::update_cachestats);
+}
+
+void mmu_t::reset_caches() {
+  tracer.reset();
+}
+
+void mmu_t::update_cachestats() {
+  tracer.update_stats(&libspike_page.cache_info);
+}
+
 
 void* mmu_t::refill_tlb(reg_t addr, reg_t bytes, bool store, bool fetch)
 {

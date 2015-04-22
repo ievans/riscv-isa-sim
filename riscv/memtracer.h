@@ -7,7 +7,7 @@
 #include <string.h>
 #include <vector>
 #include <algorithm>
-#include "cachelib.h"
+#include "libspike.h"
 
 class cache_sim_t;
 
@@ -54,7 +54,6 @@ class memtracer_list_t : public memtracer_t
     for(uint32_t i = 0; i < list.size(); i++) {
       list[i]->print_stats();
     }
-    update_page();
   }
 
   void reset() {
@@ -69,17 +68,11 @@ class memtracer_list_t : public memtracer_t
 
   void add_cache(cache_sim_t* cache);
   void get_all_caches();
-  void update_page();
-
-  uint8_t* get_page() {
-    update_page();
-    return page_buf.buf;
-  }
+  void update_stats(cache_info_t* cache_info);
 
  private:
   std::vector<memtracer_t*> list;
   std::vector<cache_sim_t*> cache_buf;
-  cache_info_u page_buf;
 };
 
 #endif

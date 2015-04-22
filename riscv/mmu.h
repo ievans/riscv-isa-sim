@@ -9,7 +9,7 @@
 #include "config.h"
 #include "processor.h"
 #include "memtracer.h"
-#include "cachelib.h"
+#include "libspike.h"
 #include <vector>
 
 // virtual memory configuration
@@ -201,16 +201,39 @@ private:
   // perform a page table walk for a given virtual address
   pte_t walk(reg_t addr);
 
+
+  // Libspike functions
+  void reset_caches();
+  void update_cachestats();
+
+  // Libspike page buffer
+  libspike_page_u libspike_page;
+
+  // List of libspike functions
+  typedef void (mmu_t::*libspike_func)();
+  std::vector<libspike_func> libspike_funcs;
+  void init_libspike();
+
+  int get_libspike_fn_ind(reg_t addr) {
+    int ind = (addr - LIBSPIKE_BASE_ADDR - LIBSPIKE_FN_OFFSET) / 8;
+    if(ind >= 0 && (uint32_t) ind < libspike_funcs.size()) // shut up gcc
+      return ind;
+    return -1;
+  }
+
+
   // translate a virtual address to a physical address
   void* translate(reg_t addr, reg_t bytes, bool store, bool fetch)
     __attribute__((always_inline))
   {
-    if (unlikely((addr >> PGSHIFT) == (CACHE_ADDR >> PGSHIFT))) {
+    if (unlikely((addr >> PGSHIFT) == (LIBSPIKE_BASE_ADDR >> PGSHIFT))) {
       is_special = true;
-      if(addr == CACHE_ADDR + CACHE_RESET_OFFSET) {
-        tracer.reset();
+      int fn_ind = get_libspike_fn_ind(addr);
+      if(fn_ind >= 0) {
+        (this->*libspike_funcs[fn_ind])();
       }
-      return (void*) (tracer.get_page() + (addr & ((1 << PGSHIFT) - 1)));
+
+      return (void*) (libspike_page.buf + (addr & ((1 << PGSHIFT) - 1)));
     }
     reg_t idx = (addr >> PGSHIFT) % TLB_ENTRIES;
     reg_t expected_tag = addr >> PGSHIFT;
@@ -234,7 +257,8 @@ private:
   {
     if(unlikely(is_special)) {
       is_special = false;
-      return (void*) (tracer.get_page() + 0xf00);
+      // We have to return something, just use a throwaway address
+      return (void*) (libspike_page.buf + LIBSPIKE_TAG_OFFSET);
     }
 
     uint64_t out = (uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO;
