@@ -24,6 +24,7 @@ public:
   void stop();
   void set_debug(bool value);
   void set_histogram(bool value);
+  void set_cache_level(bool value);
   void set_procs_debug(bool value);
   htif_isasim_t* get_htif() { return htif.get(); }
   mmu_t* get_debug_mmu() { return debug_mmu; }
@@ -51,6 +52,7 @@ private:
   size_t current_proc;
   bool debug;
   bool histogram_enabled; // provide a histogram of PCs
+  int cache_level; // what memory accesses should take place for cache stats
 
   // presents a prompt for introspection into the simulation
   void interactive();

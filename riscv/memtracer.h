@@ -6,6 +6,10 @@
 #include <cstdint>
 #include <string.h>
 #include <vector>
+#include <algorithm>
+#include "cachelib.h"
+
+class cache_sim_t;
 
 class memtracer_t
 {
@@ -17,6 +21,10 @@ class memtracer_t
   virtual void trace(uint64_t addr, size_t bytes, bool store, bool fetch) = 0;
   virtual void print_stats() = 0;
   virtual void reset() = 0;
+  virtual bool is_list() = 0;
+  virtual cache_sim_t *get_cache() {
+    return NULL;
+  }
 };
 
 class memtracer_list_t : public memtracer_t
@@ -46,6 +54,7 @@ class memtracer_list_t : public memtracer_t
     for(uint32_t i = 0; i < list.size(); i++) {
       list[i]->print_stats();
     }
+    update_page();
   }
 
   void reset() {
@@ -53,8 +62,24 @@ class memtracer_list_t : public memtracer_t
       list[i]->reset();
     }
   }
+
+  bool is_list() {
+    return true;
+  }
+
+  void add_cache(cache_sim_t* cache);
+  void get_all_caches();
+  void update_page();
+
+  uint8_t* get_page() {
+    update_page();
+    return page_buf.buf;
+  }
+
  private:
   std::vector<memtracer_t*> list;
+  std::vector<cache_sim_t*> cache_buf;
+  cache_info_u page_buf;
 };
 
 #endif

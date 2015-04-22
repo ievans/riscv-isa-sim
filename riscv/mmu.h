@@ -9,6 +9,7 @@
 #include "config.h"
 #include "processor.h"
 #include "memtracer.h"
+#include "cachelib.h"
 #include <vector>
 
 // virtual memory configuration
@@ -180,6 +181,7 @@ private:
   char* mem;
   char* tagmem;
   size_t memsz;
+  bool is_special = false;
   processor_t* proc;
   memtracer_list_t tracer;
 
@@ -203,6 +205,13 @@ private:
   void* translate(reg_t addr, reg_t bytes, bool store, bool fetch)
     __attribute__((always_inline))
   {
+    if (unlikely((addr >> PGSHIFT) == (CACHE_ADDR >> PGSHIFT))) {
+      is_special = true;
+      if(addr == CACHE_ADDR + CACHE_RESET_OFFSET) {
+        tracer.reset();
+      }
+      return (void*) (tracer.get_page() + (addr & ((1 << PGSHIFT) - 1)));
+    }
     reg_t idx = (addr >> PGSHIFT) % TLB_ENTRIES;
     reg_t expected_tag = addr >> PGSHIFT;
     reg_t* tags = fetch ? tlb_insn_tag : store ? tlb_store_tag :tlb_load_tag;
@@ -223,7 +232,14 @@ private:
   void *paddr_to_tagaddr(void *paddr)
     __attribute__((always_inline))
   {
-    return (void*) ((uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO);
+    if(unlikely(is_special)) {
+      is_special = false;
+      return (void*) (tracer.get_page() + 0xf00);
+    }
+
+    uint64_t out = (uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO;
+
+    return (void*) out;
   }
   
   friend class processor_t;

@@ -74,12 +74,18 @@ cache_sim_t::~cache_sim_t()
   delete [] tags;
 }
 
+float cache_sim_t::get_miss_rate() {
+  if(read_accesses + write_accesses == 0)
+    return 0;
+  return 100.0f * (read_misses+write_misses)/(read_accesses+write_accesses);
+}
+
 void cache_sim_t::print_stats()
 {
   if(read_accesses + write_accesses == 0)
     return;
 
-  float mr = 100.0f*(read_misses+write_misses)/(read_accesses+write_accesses);
+  float mr = get_miss_rate();
 
   std::cout << std::setprecision(3) << std::fixed;
   std::cout << name << " ";
@@ -129,6 +135,11 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
 
 void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
 {
+  if(tag_mode) {
+    // Tag caches use smaller units
+    bytes = (bytes + 7) / 8;
+    addr /= 8;
+  }
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
 

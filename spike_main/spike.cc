@@ -27,6 +27,7 @@ static void help()
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>     B both powers of 2).\n");
+  fprintf(stderr, "  --tc=<S>:<W>:<B>   Tag cache\n");
   fprintf(stderr, "  --extension=<name> Specify RoCC Extension\n");
   fprintf(stderr, "  --extlib=<name>    Shared library to load\n");
   exit(1);
@@ -73,6 +74,7 @@ int main(int argc, char** argv)
   std::unique_ptr<icache_sim_t> ic;
   std::unique_ptr<dcache_sim_t> dc;
   std::unique_ptr<cache_sim_t> l2;
+  std::unique_ptr<cache_sim_t> tc;
   std::function<extension_t*()> extension;
 
   option_parser_t parser;
@@ -85,6 +87,7 @@ int main(int argc, char** argv)
   parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
   parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
+  parser.option(0, "tc", 1, [&](const char* s){tc.reset(cache_sim_t::construct(s, "TC$")); tc->set_tag_mode(true); });
   parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
   parser.option(0, "extlib", 1, [&](const char *s){
     void *lib = dlopen(s, RTLD_NOW | RTLD_GLOBAL);
@@ -100,6 +103,7 @@ int main(int argc, char** argv)
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   sim_t s(nprocs, mem_mb, htif_args);
 
+  if (l2 && tc) l2->set_miss_handler(&*tc);
   if (ic && l2) ic->set_miss_handler(&*l2);
   if (dc && l2) dc->set_miss_handler(&*l2);
   if (ic) s.get_debug_mmu()->register_memtracer(&*ic);

@@ -21,6 +21,7 @@ riscv_hdrs = \
 	rocc.h \
 	insn_template.h \
 	mulhi.h \
+	cachelib.h \
 
 riscv_precompiled_hdrs = \
 	insn_template.h \
@@ -32,6 +33,7 @@ riscv_srcs = \
 	interactive.cc \
 	trap.cc \
 	cachesim.cc \
+	memtracer.cc \
 	mmu.cc \
 	disasm.cc \
 	extension.cc \

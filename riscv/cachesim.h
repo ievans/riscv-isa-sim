@@ -27,8 +27,12 @@ class cache_sim_t
   virtual ~cache_sim_t();
 
   void access(uint64_t addr, size_t bytes, bool store);
+  const char* get_name() { return name.c_str(); }
   void print_stats();
+  float get_miss_rate();
   void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
+  cache_sim_t* get_miss_handler() { return miss_handler; }
+  void set_tag_mode(bool mode) { tag_mode = mode; }
 
   static cache_sim_t* construct(const char* config, const char* name);
 
@@ -71,6 +75,7 @@ class cache_sim_t
   uint64_t write_misses;
   uint64_t bytes_written;
   uint64_t writebacks;
+  bool tag_mode = false;
 
   std::string name;
 
@@ -108,6 +113,12 @@ class cache_memtracer_t : public memtracer_t
   }
   void reset() {
     cache->reset();
+  }
+  bool is_list() {
+    return false;
+  }
+  cache_sim_t *get_cache() {
+    return cache;
   }
 
  protected:
