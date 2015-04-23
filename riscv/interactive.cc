@@ -82,6 +82,8 @@ void sim_t::interactive()
     funcs["mem"] = &sim_t::interactive_mem;
     funcs["memt"] = &sim_t::interactive_mem_t;
     funcs["dump"] = &sim_t::interactive_dump;
+    funcs["watch"] = &sim_t::interactive_watch;
+    funcs["when"] = &sim_t::interactive_when;
     funcs["pc"] = &sim_t::interactive_pc;
     funcs["asm"] = &sim_t::interactive_asm;
     funcs["str"] = &sim_t::interactive_str;
@@ -399,6 +401,88 @@ tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
   }
   return val;
 }
+
+void sim_t::do_watch(size_t proc, reg_t addr)
+{
+  // Check processor number and get MMU.
+  if(proc >= num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[proc]->get_mmu(); 
+
+  // Get the watch_loc and tell it to watch.
+  watch_loc * wl = mmu->get_watch_loc();
+  if (wl) {
+    wl->update_addr(addr);
+    std::cerr << "Now watching..." << std::endl;
+  } else {
+    std::cerr << "Memory watching not enabled at startup." << std::endl;
+  }
+}
+
+void sim_t::interactive_watch(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if(args.size() != 2)
+    throw trap_illegal_instruction();
+  std::string addr_str = args[1];
+
+  // Check processor number and get mmu.
+  size_t p = strtoul(args[0].c_str(), NULL, 10);
+  if(p >= num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu(); 
+
+  // Process the provided address.
+  reg_t addr = parse_addr(addr_str);
+ 
+  // Tell the processor to watch. 
+  do_watch(p, addr);
+}
+
+
+reg_t sim_t::get_when(size_t proc, size_t numToGet)
+{
+  // Check processor number and get mmu.
+  if(proc >= num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[proc]->get_mmu(); 
+
+  // Get our watch_loc and get the write's PC.
+  watch_loc* wl = mmu->get_watch_loc();
+  if (!wl) {
+    std::cerr << "No write tracer found." << std::endl;
+    return (reg_t) 0; // Handle case when watch_loc is not turned on.
+  }
+
+  return wl->get_nth_recent_access(numToGet);
+}
+
+void sim_t::interactive_when(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if(args.size() < 1 || args.size() > 2)
+    throw trap_illegal_instruction();
+
+  // Get processor number.
+  size_t p = (size_t) strtoul(args[0].c_str(), NULL, 10);
+  if(p >= num_cores())
+    throw trap_illegal_instruction();
+
+  // Get number of writes to print.
+  size_t n;
+  if (args.size() == 2) {
+    n = (size_t) strtoul(args[1].c_str(), NULL, 10);
+  } else {
+    n = 16; // default: print 16 accesses
+  }
+
+  // Print the PC of the most recent n writes
+  // to the address being watched.
+  for (size_t i = 0; i < n; i++) {
+    reg_t pc = get_when(p, i);
+    std::cerr << std::dec << i << " writes ago, PC was: 0x" << std::hex << pc << "\n";
+  }
+  std::cerr << std::endl;
+}
+
 
 #define DUMP_SIZE 16 // in words
 tagged_reg_t dump_buffer[DUMP_SIZE];

@@ -10,7 +10,9 @@
 #include "processor.h"
 #include "memtracer.h"
 #include "libspike.h"
+#include "watchloc.h"
 #include <vector>
+#include <iostream>
 
 // virtual memory configuration
 typedef reg_t pte_t;
@@ -174,6 +176,8 @@ public:
   void flush_icache();
 
   void register_memtracer(memtracer_t*);
+  watch_loc* get_watch_loc() { return wl; }
+  void set_watch_loc(watch_loc* new_wl) { wl = new_wl; }
   void print_memtracer();
   void reset_memtracer();
 
@@ -184,6 +188,7 @@ private:
   bool is_special = false;
   processor_t* proc;
   memtracer_list_t tracer;
+  watch_loc* wl;
 
   // implement an instruction cache for simulator performance
   icache_entry_t icache[ICACHE_ENTRIES];
@@ -200,7 +205,6 @@ private:
 
   // perform a page table walk for a given virtual address
   pte_t walk(reg_t addr);
-
 
   // Libspike functions
   void reset_caches();
@@ -221,9 +225,20 @@ private:
     return -1;
   }
 
+  // wrapper for translate, but for watching a memory location
+  void* translate(reg_t addr, reg_t bytes, bool store, bool fetch)
+    __attribute__((always_inline))
+  {
+    // do evil things
+    if (wl && store && !fetch) {
+      // pass to watch_loc
+      wl->access(addr);
+    }
+    return __translate(addr, bytes, store, fetch);
+  }
 
   // translate a virtual address to a physical address
-  void* translate(reg_t addr, reg_t bytes, bool store, bool fetch)
+  void* __translate(reg_t addr, reg_t bytes, bool store, bool fetch)
     __attribute__((always_inline))
   {
     if (unlikely((addr >> PGSHIFT) == (LIBSPIKE_BASE_ADDR >> PGSHIFT))) {

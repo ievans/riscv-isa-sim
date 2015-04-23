@@ -1,5 +1,5 @@
 require_xpr64;
-reg_t tag = TAG_S2;
+MMU.store_tagged_uint64(RS1 + insn.s_imm(), RS2, TAG_S2);
 // If we're storing the return address into memory...
 #ifdef TAG_POLICY_NO_RETURN_COPY
 if ((TAG_ENFORCE_ON)
@@ -11,5 +11,3 @@ if ((TAG_ENFORCE_ON)
   CLEAR_TAG(RETURN_REGISTER, TAG_PC);
 }
 #endif
-
-MMU.store_tagged_uint64(RS1 + insn.s_imm(), RS2, tag);

@@ -11,6 +11,7 @@ riscv_hdrs = \
 	common.h \
 	decode.h \
 	mmu.h \
+  watchloc.h \
 	processor.h \
 	sim.h \
 	trap.h \
@@ -28,6 +29,7 @@ riscv_precompiled_hdrs = \
 
 riscv_srcs = \
 	htif.cc \
+  watchloc.cc \
 	processor.cc \
 	sim.cc \
 	interactive.cc \

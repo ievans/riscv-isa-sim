@@ -7,14 +7,6 @@ if (!IS_SUPERVISOR) {
   if (cleared_tag != v.tag) {
     MMU.store_tag_value(cleared_tag, addr);
   }
-  if ((TAG_ENFORCE_ON)
-    && (insn.rd() != RETURN_REGISTER)
-  )
-  { 
-    // Loading into a non-return register,
-    // must clear PC tag in destination register.
-    v.tag = cleared_tag;
-  }
 }
 #endif // TAG_POLICY_NO_RETURN_COPY
 WRITE_RD_AND_TAG(v.val, v.tag);

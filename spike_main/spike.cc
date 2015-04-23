@@ -23,6 +23,7 @@ static void help()
   fprintf(stderr, "  -m <n>             Provide <n> MB of target memory\n");
   fprintf(stderr, "  -d                 Interactive debug mode\n");
   fprintf(stderr, "  -g                 Track histogram of PCs\n");
+  fprintf(stderr, "  -t                 Allow for tracing memory writes\n");
   fprintf(stderr, "  -h                 Print this help message\n");
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
@@ -69,6 +70,7 @@ int main(int argc, char** argv)
 
   bool debug = false;
   bool histogram = false;
+  bool use_watch_loc = false;
   size_t nprocs = 1;
   size_t mem_mb = 0;
   std::unique_ptr<icache_sim_t> ic;
@@ -84,6 +86,7 @@ int main(int argc, char** argv)
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mem_mb = atoi(s);});
+  parser.option('t', 0, 0, [&](const char* s){use_watch_loc = true;});
   parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
   parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
@@ -113,6 +116,12 @@ int main(int argc, char** argv)
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
     if (extension) s.get_core(i)->register_extension(extension());
+    if (use_watch_loc) {
+        // Set up memory tracing for each core.
+        state_t* st = s.get_core(i)->get_state();
+        watch_loc* wl = new watch_loc(st);
+        s.get_core(i)->get_mmu()->set_watch_loc(wl);
+    }
   }
 
   s.set_debug(debug);
