@@ -17,11 +17,13 @@ class memtracer_t
   memtracer_t() {}
   virtual ~memtracer_t() {}
 
-  virtual bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch) = 0;
-  virtual void trace(uint64_t addr, size_t bytes, bool store, bool fetch) = 0;
-  virtual void print_stats() = 0;
-  virtual void reset() = 0;
-  virtual bool is_list() = 0;
+  virtual bool interested_in_range(uint64_t begin, size_t bytes, bool store, bool fetch, bool is_tag) = 0;
+  virtual void trace(uint64_t addr, size_t bytes, bool store, bool fetch, bool is_tag, uint64_t val) = 0;
+  virtual void print_stats() {}
+  virtual void reset() {}
+  virtual bool is_list() {
+    return false;
+  }
   virtual cache_sim_t *get_cache() {
     return NULL;
   }
@@ -31,18 +33,20 @@ class memtracer_list_t : public memtracer_t
 {
  public:
   bool empty() { return list.empty(); }
-  bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch)
+  bool interested_in_range(uint64_t begin, size_t bytes, bool store, bool fetch, bool is_tag)
   {
     for (std::vector<memtracer_t*>::iterator it = list.begin(); it != list.end(); ++it)
-      if ((*it)->interested_in_range(begin, end, store, fetch))
+      if ((*it)->interested_in_range(begin, bytes, store, fetch, is_tag))
         return true;
     return false;
   }
 
-  void trace(uint64_t addr, size_t bytes, bool store, bool fetch)
+  void trace(uint64_t addr, size_t bytes, bool store, bool fetch, bool is_tag, uint64_t val)
   {
-    for (std::vector<memtracer_t*>::iterator it = list.begin(); it != list.end(); ++it)
-      (*it)->trace(addr, bytes, store, fetch);
+    for (std::vector<memtracer_t*>::iterator it = list.begin(); it != list.end(); ++it) {
+      if((*it)->interested_in_range(addr, bytes, store, fetch, is_tag))
+        (*it)->trace(addr, bytes, store, fetch, is_tag, val);
+    }
   }
 
   void hook(memtracer_t* h)

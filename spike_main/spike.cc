@@ -4,6 +4,7 @@
 #include "htif.h"
 #include "cachesim.h"
 #include "extension.h"
+#include "tagstats.h"
 #include <dlfcn.h>
 #include <fesvr/option_parser.h>
 #include <stdio.h>
@@ -25,6 +26,7 @@ static void help()
   fprintf(stderr, "  -g                 Track histogram of PCs\n");
   fprintf(stderr, "  -t                 Allow for tracing memory writes\n");
   fprintf(stderr, "  -h                 Print this help message\n");
+  fprintf(stderr, "  -s                 Track tag statistics\n");
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>     B both powers of 2).\n");
@@ -73,17 +75,20 @@ int main(int argc, char** argv)
   bool use_watch_loc = false;
   size_t nprocs = 1;
   size_t mem_mb = 0;
+  bool tag_stats = false;
   std::unique_ptr<icache_sim_t> ic;
   std::unique_ptr<dcache_sim_t> dc;
   std::unique_ptr<cache_sim_t> l2;
   std::unique_ptr<cache_sim_t> tc;
   std::function<extension_t*()> extension;
+  std::unique_ptr<tag_memtracer_t> tagtracer;
 
   option_parser_t parser;
   parser.help(&help);
   parser.option('h', 0, 0, [&](const char* s){help();});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
+  parser.option('s', 0, 0, [&](const char* s){tag_stats = true;});
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mem_mb = atoi(s);});
   parser.option('t', 0, 0, [&](const char* s){use_watch_loc = true;});
@@ -106,15 +111,21 @@ int main(int argc, char** argv)
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
   sim_t s(nprocs, mem_mb, htif_args);
 
+  if(tag_stats) {
+    tagtracer.reset(new tag_memtracer_t(s.get_tagmem(), s.get_memsz() / MEM_TO_TAG_RATIO));
+  }
+
   if (l2 && tc) l2->set_miss_handler(&*tc);
   if (ic && l2) ic->set_miss_handler(&*l2);
   if (dc && l2) dc->set_miss_handler(&*l2);
   if (ic) s.get_debug_mmu()->register_memtracer(&*ic);
   if (dc) s.get_debug_mmu()->register_memtracer(&*dc);
+  if (tagtracer) s.get_debug_mmu()->register_memtracer(&*tagtracer);
   for (size_t i = 0; i < nprocs; i++)
   {
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
+    if (tagtracer) s.get_core(i)->get_mmu()->register_memtracer(&*tagtracer);
     if (extension) s.get_core(i)->register_extension(extension());
     if (use_watch_loc) {
         // Set up memory tracing for each core.

@@ -114,9 +114,6 @@ class cache_memtracer_t : public memtracer_t
   void reset() {
     cache->reset();
   }
-  bool is_list() {
-    return false;
-  }
   cache_sim_t *get_cache() {
     return cache;
   }
@@ -129,11 +126,11 @@ class icache_sim_t : public cache_memtracer_t
 {
  public:
   icache_sim_t(const char* config) : cache_memtracer_t(config, "I$") {}
-  bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch)
+  bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch, bool is_tag)
   {
     return fetch;
   }
-  void trace(uint64_t addr, size_t bytes, bool store, bool fetch)
+  void trace(uint64_t addr, size_t bytes, bool store, bool fetch, bool is_tag, uint64_t val)
   {
     if (fetch) cache->access(addr, bytes, false);
   }
@@ -143,13 +140,13 @@ class dcache_sim_t : public cache_memtracer_t
 {
  public:
   dcache_sim_t(const char* config) : cache_memtracer_t(config, "D$") {}
-  bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch)
+  bool interested_in_range(uint64_t begin, uint64_t end, bool store, bool fetch, bool is_tag)
   {
-    return !fetch;
+    return !fetch && !is_tag;
   }
-  void trace(uint64_t addr, size_t bytes, bool store, bool fetch)
+  void trace(uint64_t addr, size_t bytes, bool store, bool fetch, bool is_tag, uint64_t val)
   {
-    if (!fetch) cache->access(addr, bytes, store);
+    if (!fetch && !is_tag) cache->access(addr, bytes, store);
   }
 };
 

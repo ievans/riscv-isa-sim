@@ -48,6 +48,8 @@ public:
   #define load_func(type) \
     type##_t load_##type(reg_t addr) __attribute__((always_inline)) { \
       void* paddr = translate(addr, sizeof(type##_t), false, false); \
+      if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
+        tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
       return *(type##_t*)paddr; \
     }
 
@@ -55,8 +57,12 @@ public:
     tagged_reg_t load_tagged_##type(reg_t addr) __attribute__((always_inline)) { \
         tagged_reg_t r; \
         void* paddr = translate(addr, sizeof(type##_t), false, false); \
+        if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
+          tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
         r.val = *(type##_t*)paddr; \
         void *tagaddr = paddr_to_tagaddr(paddr); \
+        if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, false, false, true))) \
+          tracer.trace((uint64_t) tagaddr, 1, false, false, true, 0); \
         r.tag = *(tag_t*)tagaddr; \
         return r; \
   }
@@ -87,20 +93,28 @@ public:
   #define store_func(type) \
     void store_##type(reg_t addr, type##_t val) { \
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
+      if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
+        tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
       *(type##_t*)paddr = val; \
     }
 
   #define store_func_tagged(type) \
     void store_tagged_##type(reg_t addr, type##_t val, tag_t tag) { \
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
+      if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
+        tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
       *(type##_t*)paddr = val; \
       void *tagaddr = paddr_to_tagaddr(paddr); \
+      if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
+        tracer.trace((uint64_t) tagaddr, 1, true, false, true, tag); \
       *(tag_t*)tagaddr = tag; \
     }
 
   void store_tag_value(tag_t value, reg_t addr) {
     void* paddr = translate(addr, 1, true, false);
     void* tagaddr = paddr_to_tagaddr(paddr);
+    if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
+      tracer.trace((uint64_t) tagaddr, 1, true, false, true, value); \
     *(tag_t*)tagaddr = value;
   }
 
@@ -157,10 +171,10 @@ public:
     icache[idx].data = fetch;
 
     reg_t paddr = iaddr - mem;
-    if (!tracer.empty() && tracer.interested_in_range(paddr, paddr + 1, false, true))
+    if (!tracer.empty() && tracer.interested_in_range(paddr, 1, false, true, false))
     {
       icache[idx].tag = -1;
-      tracer.trace(paddr, 1, false, true);
+      tracer.trace(paddr, 1, false, true, false, 0);
     }
     return &icache[idx];
   }
@@ -273,7 +287,7 @@ private:
     if(unlikely(is_special)) {
       is_special = false;
       // We have to return something, just use a throwaway address
-      return (void*) (libspike_page.buf + LIBSPIKE_TAG_OFFSET);
+      return (void*) (tagmem);
     }
 
     uint64_t out = (uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO;

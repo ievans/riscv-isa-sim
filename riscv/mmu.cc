@@ -70,15 +70,11 @@ void* mmu_t::refill_tlb(reg_t addr, reg_t bytes, bool store, bool fetch)
   reg_t pgbase = pte >> PGSHIFT << PGSHIFT;
   reg_t paddr = pgbase + pgoff;
 
-  if (unlikely(tracer.interested_in_range(pgbase, pgbase + PGSIZE, store, fetch)))
-    tracer.trace(paddr, bytes, store, fetch);
-  else
-  {
-    tlb_load_tag[idx] = (pte_perm & PTE_UR) ? expected_tag : -1;
-    tlb_store_tag[idx] = (pte_perm & PTE_UW) ? expected_tag : -1;
-    tlb_insn_tag[idx] = (pte_perm & PTE_UX) ? expected_tag : -1;
-    tlb_data[idx] = mem + pgbase - (addr & ~(PGSIZE-1));
-  }
+
+  tlb_load_tag[idx] = (pte_perm & PTE_UR) ? expected_tag : -1;
+  tlb_store_tag[idx] = (pte_perm & PTE_UW) ? expected_tag : -1;
+  tlb_insn_tag[idx] = (pte_perm & PTE_UX) ? expected_tag : -1;
+  tlb_data[idx] = mem + pgbase - (addr & ~(PGSIZE-1));
 
   return mem + paddr;
 }

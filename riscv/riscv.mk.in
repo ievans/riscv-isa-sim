@@ -22,6 +22,7 @@ riscv_hdrs = \
 	rocc.h \
 	insn_template.h \
 	mulhi.h \
+	tagstats.h \
 	libspike.h \
 
 riscv_precompiled_hdrs = \

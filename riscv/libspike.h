@@ -11,6 +11,8 @@
 
 #define ADD_FN(fn_name) inline void fn_name() {*((uint8_t*) (LIBSPIKE_BASE_ADDR + LIBSPIKE_FN_OFFSET + 8*(__LINE__ - base))) = 1;}
 
+// To add new functions, first create function in mmu.h and add it to init_libspike() in mmu.cc
+// Then add the function here, making sure that the order is the same
 // Don't add extra newlines!
 static int base = __LINE__ + 1;
 ADD_FN(cache_reset)

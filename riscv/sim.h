@@ -39,10 +39,19 @@ public:
   // read one of the system control registers
   reg_t get_scr(int which);
 
+  size_t get_memsz() {
+    return memsz;
+  }
+  char* get_tagmem() {
+    return tagmem;
+  }
+
+
 private:
   std::unique_ptr<htif_isasim_t> htif;
   char* mem; // main memory
   size_t memsz; // memory size in bytes
+  char *tagmem; // tag memory
   mmu_t* debug_mmu;  // debug port into main memory
   std::vector<processor_t*> procs;
 
