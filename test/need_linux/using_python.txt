@@ -1,0 +1,10 @@
+After downloading and untar-ing python,
+it can be used in riscv-linux by creating a disk image
+holding the entire folder (use disk image size of at least 4M).
+Then, after riscv-linux boots the files in sysroot-destdir
+must be moved to their appropriate locations
+(e.g. python/sysroot-destdir/include -> /usr/include).
+
+Python was compiled with riscv-unknown-linux-gnu-gcc from
+the tags branch on Mar 29 2015.
+
