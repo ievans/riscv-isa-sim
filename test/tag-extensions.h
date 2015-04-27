@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <stdbool.h>
 
-#define NOT_AVAILABLE "warning: tag enforcement not available for this architecture"
+#define NOT_AVAILABLE "warning: tag enforcement not available for this architecture\n"
 
 void tag_enforcement_on() {
 #ifdef __riscv
@@ -65,14 +67,25 @@ free_tagged(void* ptr) {
   // No matter the type of pointer, set to uninitialized.
   __asm__ __volatile__ (
     "settag %0, 0\n\t"
-    "sd %0, -24(s0)\n\t"
-    "fence"
-    :: "r"(ptr)
-     : "memory");
+     : "=r"(ptr)
+     : "r"(ptr));
 #else
   printf(NOT_AVAILABLE);
 #endif
 
   free(ptr);
+}
+
+// Simple function to strip tags of values,
+// assuming that casts do not strip tags.
+uint64_t strip_tag(uint64_t val) {
+  // I wonder if this could be a buffer overflow...
+  char buf[16];
+
+  // Convert to a string, then convert back.
+  sprintf(buf, "%" PRIx64 "\n", val);
+  unsigned long val_num = strtoul(buf, NULL, 16);
+  
+  return (uint64_t) val_num;
 }
 
