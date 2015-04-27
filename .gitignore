@@ -9,3 +9,5 @@ tramp
 .\#*
 
 *.output.*.txt
+*.d
+*.gch
