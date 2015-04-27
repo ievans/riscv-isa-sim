@@ -14,6 +14,19 @@ typedef struct {
 
 extern void printColor(Color * c);
 
+struct ngx_module_s {
+    int            ctx_index;
+    void                 *ctx;
+    int           (*init_master)(int *log);
+    int           (*init_module)(int *cycle);
+    int           (*init_process)(int *cycle);
+    int           (*init_thread)(int *cycle);
+    void                (*exit_thread)(int *cycle);
+    void                (*exit_process)(int *cycle);
+    void                (*exit_master)(int *cycle);
+};
+
+
 Color Colors[MAX_COLORS];
 
 /*
@@ -62,13 +75,18 @@ int main() {
     eachColor(printColor);
 
     // we want to store print color without invoking a function
-    global = (int *)printColor;
+    global = (int *)printColor + 0x1337;
 
+    struct ngx_module_s xx;
+    xx.init_thread = printColor;
 
     // we want to declare a pointer to the function but not actually assign it
     // this shouldn't actually be dangerous because it has a bad type but no
     // actual value that is dangerous. so it shouldn't show up in the anlaysis
     int (*myfunction)(char * buff);
+    myfunction = printColor;
+
+    eachColor(myfunction);
 
 
     // todo, see http://stackoverflow.com/questions/13788590/c-address-of-lambda-objects-as-parameters-to-functions

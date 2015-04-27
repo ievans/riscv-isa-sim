@@ -3,10 +3,24 @@
 # clang will automatically invoke GCC, but we need to make sure it finds the magic-gcc which
 # ignores the riscv argument
 # so make sure magic gcc is on the path
-echo "bololololololololol"
+echo "starting magic clang"
 SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in
 SCRIPTDIR=$(dirname "$SCRIPT")
 export PATH=$SCRIPTDIR/env2:$PATH
 echo $PATH
-clang -O1 -target riscv -mriscv=RV64IAMFD -Xclang -load -Xclang /usr/local/lib/HelloIne.so $@
+
+
+TAGGINGLIB=/usr/local/lib/HelloIne.so
+
+if [ -f $TAGGINGLIB ];
+then
+    echo "File $TAGGINGLIB exists--good"
+else
+    echo "LLVM pass .so file: $TAGGINGLIB does not exist."
+    exit -1
+fi
+
+clang -target riscv -mriscv=RV64IAMFD -Xclang -load -Xclang $TAGGINGLIB $@
+#clang -target riscv -mriscv=RV64IAMFD $@
+#clang -target riscv -mriscv=RV64IAMFD $@

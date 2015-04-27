@@ -10,4 +10,4 @@ for var in "$@"; do
 done
 
 echo $ARGS
-$RISCV/bin/riscv64-unknown-elf-gcc $ARGS
+$RISCV/bin/riscv64-unknown-linux-gnu-gcc $ARGS
