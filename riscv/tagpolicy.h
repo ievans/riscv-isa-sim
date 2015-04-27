@@ -81,5 +81,7 @@ void print_tag_policy() {
 #define TAG_PC 1
 #define TAG_NULL 0
 #define TAG_IMMEDIATE 0
+#define TAG_FLOAT 0
+#define TAG_HTIF 0
 
 #endif // TAG_POLICY_H

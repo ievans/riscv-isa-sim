@@ -47,7 +47,7 @@ void htif_isasim_t::tick_once()
 
       uint64_t buf[hdr.data_size];
       for (size_t i = 0; i < hdr.data_size; i++)
-        buf[i] = sim->debug_mmu->load_uint64((hdr.addr+i)*HTIF_DATA_ALIGN);
+        buf[i] = sim->debug_mmu->load_tagged_uint64((hdr.addr+i)*HTIF_DATA_ALIGN).val;
       send(buf, hdr.data_size * sizeof(buf[0]));
       break;
     }
@@ -55,7 +55,7 @@ void htif_isasim_t::tick_once()
     {
       const uint64_t* buf = (const uint64_t*)p.get_payload();
       for (size_t i = 0; i < hdr.data_size; i++)
-        sim->debug_mmu->store_uint64((hdr.addr+i)*HTIF_DATA_ALIGN, buf[i]);
+        sim->debug_mmu->store_tagged_uint64((hdr.addr+i)*HTIF_DATA_ALIGN, buf[i], TAG_HTIF);
 
       packet_header_t ack(HTIF_CMD_ACK, seqno, 0, 0);
       send(&ack, sizeof(ack));
