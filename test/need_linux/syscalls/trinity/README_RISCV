@@ -1,0 +1,13 @@
+Using trinity on RISCV is simple.
+
+Define the CROSS_COMPILE environment variable on your system
+to be the prefix for the RISCV toolchain to use
+(e.g. riscv64-unknown-linux-gnu- if $RISCV/bin is on your $PATH)
+with the final dash.
+
+Then, run ./configure in the same directory as the source,
+and run make. The trinity binary that will be created is
+ready for use in riscv.
+
+See other READMEs and the usage message for help in actually
+using trinity.
