@@ -13,6 +13,7 @@
 #include "watchloc.h"
 #include <vector>
 #include <iostream>
+#include <assert.h>
 
 // virtual memory configuration
 typedef reg_t pte_t;
@@ -50,22 +51,26 @@ public:
       void* paddr = translate(addr, sizeof(type##_t), false, false); \
       if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
         tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
+      has_no_tag = false; \
       return *(type##_t*)paddr; \
     }
 
   #define load_func_tagged(type) \
     tagged_reg_t load_tagged_##type(reg_t addr) __attribute__((always_inline)) { \
-        tagged_reg_t r; \
-        void* paddr = translate(addr, sizeof(type##_t), false, false); \
+      tagged_reg_t r; \
+      void* paddr = translate(addr, sizeof(type##_t), false, false); \
+      r.val = *(type##_t*)paddr; \
+      if(likely(!has_no_tag)) { \
         if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
           tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
-        r.val = *(type##_t*)paddr; \
         void *tagaddr = paddr_to_tagaddr(paddr); \
+        r.tag = *(tag_t*)tagaddr; \
         if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, false, false, true))) \
           tracer.trace((uint64_t) tagaddr, 1, false, false, true, 0); \
-        r.tag = *(tag_t*)tagaddr; \
-        return r; \
-  }
+      } \
+      has_no_tag = false; \
+      return r; \
+    }
 
   // load value from memory at aligned address; zero extend to register width
   load_func(uint8)
@@ -96,25 +101,29 @@ public:
       if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
         tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
       *(type##_t*)paddr = val; \
+      has_no_tag = false; \
     }
 
   #define store_func_tagged(type) \
     void store_tagged_##type(reg_t addr, type##_t val, tag_t tag) { \
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
-      if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
-        tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
       *(type##_t*)paddr = val; \
-      void *tagaddr = paddr_to_tagaddr(paddr); \
-      if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
-        tracer.trace((uint64_t) tagaddr, 1, true, false, true, tag); \
-      *(tag_t*)tagaddr = tag; \
+      if(likely(!has_no_tag)) { \
+        if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
+          tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
+        void *tagaddr = paddr_to_tagaddr(paddr); \
+        *(tag_t*)tagaddr = tag; \
+        if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
+          tracer.trace((uint64_t) tagaddr, 1, true, false, true, tag); \
+      } \
+      has_no_tag = false; \
     }
 
   void store_tag_value(tag_t value, reg_t addr) {
     void* paddr = translate(addr, 1, true, false);
     void* tagaddr = paddr_to_tagaddr(paddr);
-    if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
-      tracer.trace((uint64_t) tagaddr, 1, true, false, true, value); \
+    if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true)))
+      tracer.trace((uint64_t) tagaddr, 1, true, false, true, value);
     *(tag_t*)tagaddr = value;
   }
 
@@ -199,7 +208,7 @@ private:
   char* mem;
   char* tagmem;
   size_t memsz;
-  bool is_special = false;
+  bool has_no_tag = false;
   processor_t* proc;
   memtracer_list_t tracer;
   watch_loc* wl;
@@ -256,7 +265,7 @@ private:
     __attribute__((always_inline))
   {
     if (unlikely((addr >> PGSHIFT) == (LIBSPIKE_BASE_ADDR >> PGSHIFT))) {
-      is_special = true;
+      has_no_tag = true;
       int fn_ind = get_libspike_fn_ind(addr);
       if(fn_ind >= 0) {
         (this->*libspike_funcs[fn_ind])();
@@ -284,12 +293,6 @@ private:
   void *paddr_to_tagaddr(void *paddr)
     __attribute__((always_inline))
   {
-    if(unlikely(is_special)) {
-      is_special = false;
-      // We have to return something, just use a throwaway address
-      return (void*) (tagmem);
-    }
-
     uint64_t out = (uint64_t) tagmem + ((uint64_t) paddr - (uint64_t) mem) / MEM_TO_TAG_RATIO;
 
     return (void*) out;

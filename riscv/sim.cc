@@ -38,7 +38,9 @@ sim_t::sim_t(size_t nprocs, size_t mem_mb, const std::vector<std::string>& args)
     fprintf(stderr, "warning: only got %lu bytes of target mem (wanted %lu)\n",
             (unsigned long)memsz, (unsigned long)memsz0);
 
-  tagmem = (char*) malloc(memsz / MEM_TO_TAG_RATIO);
+  tagsz = memsz / MEM_TO_TAG_RATIO;
+  tagmem = (char*) malloc(tagsz);
+  memset(tagmem, 0, tagsz);
 
   debug_mmu = new mmu_t(mem, tagmem, memsz);
 
