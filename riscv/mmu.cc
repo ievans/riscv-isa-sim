@@ -33,6 +33,7 @@ void mmu_t::flush_tlb()
 void mmu_t::init_libspike() {
   libspike_funcs.push_back(&mmu_t::reset_caches);
   libspike_funcs.push_back(&mmu_t::update_cachestats);
+  libspike_funcs.push_back(&mmu_t::monitor);
 }
 
 void mmu_t::reset_caches() {

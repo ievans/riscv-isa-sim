@@ -92,6 +92,8 @@ public:
   void register_insn(insn_desc_t);
   void register_extension(extension_t*);
 
+  void monitor();
+
 private:
   sim_t* sim;
   mmu_t* mmu; // main memory is always accessed via the mmu

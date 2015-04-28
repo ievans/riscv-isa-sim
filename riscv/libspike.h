@@ -17,6 +17,7 @@
 static int base = __LINE__ + 1;
 ADD_FN(cache_reset)
 ADD_FN(update_cachestats)
+ADD_FN(monitor)
 
 typedef struct {
   float miss_rates[16];

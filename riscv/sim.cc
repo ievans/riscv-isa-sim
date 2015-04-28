@@ -62,6 +62,10 @@ sim_t::~sim_t()
   free(mem);
 }
 
+void sim_t::monitor() {
+  ctrlc_pressed = true;
+}
+
 void sim_t::send_ipi(reg_t who)
 {
   if (who < procs.size())

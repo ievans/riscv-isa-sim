@@ -204,6 +204,10 @@ public:
   void print_memtracer();
   void reset_memtracer();
 
+  void monitor() {
+    proc->monitor();
+  }
+
 private:
   char* mem;
   char* tagmem;

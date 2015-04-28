@@ -499,3 +499,7 @@ void processor_t::register_extension(extension_t* x)
   ext = x;
   x->set_processor(this);
 }
+
+void processor_t::monitor() {
+  sim->monitor();
+}

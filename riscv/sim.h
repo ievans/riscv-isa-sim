@@ -45,6 +45,7 @@ public:
   char* get_tagmem() {
     return tagmem;
   }
+  void monitor();
 
 
 private:
