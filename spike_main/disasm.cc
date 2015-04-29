@@ -12,11 +12,17 @@ struct : public arg_t {
   std::string to_string(insn_t insn) const {
     return std::to_string((int)insn.i_imm()) + '(' + xpr_name[insn.rs1()] + ')';
   }
+  int src(insn_t insn) const {
+    return -1;
+  }
 } load_address;
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
     return std::to_string((int)insn.s_imm()) + '(' + xpr_name[insn.rs1()] + ')';
+  }
+  int src(insn_t insn) const {
+    return -1;
   }
 } store_address;
 
@@ -30,17 +36,26 @@ struct : public arg_t {
   std::string to_string(insn_t insn) const {
     return xpr_name[insn.rd()];
   }
+  int src(insn_t insn) const {
+    return insn.rd();
+  }
 } xrd;
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
     return xpr_name[insn.rs1()];
   }
+  int src(insn_t insn) const {
+    return insn.rs1();
+  }
 } xrs1;
 
 struct : public arg_t {
   std::string to_string(insn_t insn) const {
     return xpr_name[insn.rs2()];
+  }
+  int src(insn_t insn) const {
+    return insn.rs2();
   }
 } xrs2;
 
@@ -124,6 +139,20 @@ std::string disassembler_t::disassemble(insn_t insn)
 {
   const disasm_insn_t* disasm_insn = lookup(insn);
   return disasm_insn ? disasm_insn->to_string(insn) : "unknown";
+}
+
+int* disassembler_t::lookup_args(insn_t insn)
+{
+  const disasm_insn_t* disasm_insn = lookup(insn);
+  int n = disasm_insn->args.size();
+  int s = 1;
+  for(int i = 0; i < n; i++) {
+    int t = disasm_insn->args[i]->src(insn);
+    if(i == 0 || t != 0)
+      argbuf[s++] = t;
+  }
+  argbuf[0] = s - 1;
+  return argbuf;
 }
 
 disassembler_t::disassembler_t()

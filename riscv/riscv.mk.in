@@ -24,6 +24,8 @@ riscv_hdrs = \
 	mulhi.h \
 	tagstats.h \
 	libspike.h \
+	tracker.h \
+
 
 riscv_precompiled_hdrs = \
 	insn_template.h \
@@ -42,6 +44,7 @@ riscv_srcs = \
 	extension.cc \
 	rocc.cc \
 	regnames.cc \
+	tracker.cc \
 	$(riscv_gen_srcs) \
 
 riscv_test_srcs =

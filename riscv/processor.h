@@ -4,6 +4,7 @@
 
 #include "decode.h"
 #include "config.h"
+#include "tracker.h"
 #include <cstring>
 #include <vector>
 #include <map>
@@ -94,6 +95,7 @@ public:
 
   void monitor();
 
+  tracker_t* tracker;
 private:
   sim_t* sim;
   mmu_t* mmu; // main memory is always accessed via the mmu
@@ -120,6 +122,7 @@ private:
   friend class sim_t;
   friend class mmu_t;
   friend class extension_t;
+  friend class tracker_t;
 
   void build_opcode_map();
   insn_func_t decode_insn(insn_t insn);

@@ -61,6 +61,8 @@ public:
       void* paddr = translate(addr, sizeof(type##_t), false, false); \
       r.val = *(type##_t*)paddr; \
       if(likely(!has_no_tag)) { \
+        if(likely(proc != NULL)) \
+          proc->tracker->track_load((uint64_t) paddr - (uint64_t) mem); \
         if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
           tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
         void *tagaddr = paddr_to_tagaddr(paddr); \
@@ -109,6 +111,8 @@ public:
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
       *(type##_t*)paddr = val; \
       if(likely(!has_no_tag)) { \
+        if(likely(proc != NULL)) \
+          proc->tracker->track_store((uint64_t) paddr - (uint64_t) mem, addr); \
         if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
           tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
         void *tagaddr = paddr_to_tagaddr(paddr); \
