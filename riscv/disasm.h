@@ -68,6 +68,7 @@ class disassembler_t
   std::string disassemble(insn_t insn);
   void add_insn(disasm_insn_t* insn);
   int* lookup_args(insn_t insn);
+  const char* lookup_name(insn_t insn);
 
  private:
   static const int HASH_SIZE = 256;

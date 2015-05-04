@@ -18,6 +18,7 @@ static int base = __LINE__ + 1;
 ADD_FN(cache_reset)
 ADD_FN(update_cachestats)
 ADD_FN(monitor)
+ADD_FN(libspike_track)
 
 typedef struct {
   float miss_rates[16];
@@ -25,13 +26,26 @@ typedef struct {
   uint32_t n_caches;
 } cache_info_t;
 
+typedef struct {
+  uint64_t arg0;
+  uint64_t arg1;
+  uint64_t arg2;
+  uint64_t arg3;
+  uint64_t arg4;
+} libspike_args_t;
+
 typedef union {
   cache_info_t cache_info;
-  uint8_t buf[4096]; 
+  libspike_args_t args;
+  uint8_t buf[4096];
 } libspike_page_u;
 
 inline cache_info_t* get_cache_info() {
   return &(((libspike_page_u*) (LIBSPIKE_BASE_ADDR))->cache_info);
+}
+
+inline libspike_args_t* get_libspike_args() {
+  return &(((libspike_page_u*) (LIBSPIKE_BASE_ADDR))->args);
 }
 
 #undef ADD_FN

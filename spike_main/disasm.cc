@@ -155,6 +155,12 @@ int* disassembler_t::lookup_args(insn_t insn)
   return argbuf;
 }
 
+const char* disassembler_t::lookup_name(insn_t insn)
+{
+  const disasm_insn_t* disasm_insn = lookup(insn);
+  return disasm_insn->name;
+}
+
 disassembler_t::disassembler_t()
 {
   const uint32_t mask_rd = 0x1fUL << 7;

@@ -61,7 +61,7 @@ public:
       void* paddr = translate(addr, sizeof(type##_t), false, false); \
       r.val = *(type##_t*)paddr; \
       if(likely(!has_no_tag)) { \
-        if(likely(proc != NULL)) \
+        if(proc != NULL && proc->tracker != NULL) \
           proc->tracker->track_load((uint64_t) paddr - (uint64_t) mem); \
         if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
           tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
@@ -111,7 +111,7 @@ public:
       void* paddr = translate(addr, sizeof(type##_t), true, false); \
       *(type##_t*)paddr = val; \
       if(likely(!has_no_tag)) { \
-        if(likely(proc != NULL)) \
+        if(proc != NULL && proc->tracker != NULL) \
           proc->tracker->track_store((uint64_t) paddr - (uint64_t) mem, addr); \
         if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), true, false, false))) \
           tracer.trace((uint64_t) paddr, sizeof(type##_t), true, false, false, val); \
@@ -210,6 +210,15 @@ public:
 
   void monitor() {
     proc->monitor();
+  }
+  void track_addr(reg_t addr) {
+    if(proc == NULL || proc->tracker == NULL) return;
+    uint64_t paddr = (uint64_t) translate(addr, 1, false, false) - (uint64_t) mem;
+    proc->tracker->print_mem(paddr);
+  }
+  void libspike_track() {
+    uint64_t arg0 = libspike_page.args.arg0;
+    track_addr(arg0);
   }
 
 private:
