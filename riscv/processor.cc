@@ -25,7 +25,7 @@ processor_t::processor_t(sim_t* _sim, mmu_t* _mmu, uint32_t _id)
 {
   reset(true);
   mmu->set_processor(this);
-  tracker = new tracker_t(this, sim->get_tagsz());
+  tracker = NULL;
 
   #define DECLARE_INSN(name, match, mask) REGISTER_INSN(this, name, match, mask)
   #include "encoding.h"
@@ -46,6 +46,10 @@ processor_t::~processor_t()
 #endif
 
   delete disassembler;
+}
+
+void processor_t::init_tracker() {
+  tracker = new tracker_t(this, sim->get_tagsz());
 }
 
 void state_t::reset()
@@ -156,10 +160,9 @@ static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
 {
   /*
   printf("Insn: %s\n", p->get_disassembler()->disassemble(fetch.insn).c_str());
-  int *buf = p->get_disassembler()->lookup_args(fetch.insn);
-  printf("Data: %d %d %d %d\n", buf[0], buf[1], buf[2], buf[3]);
   */
-  p->tracker->track(fetch.insn);
+  if(p->tracker != NULL)
+    p->tracker->track(fetch.insn);
 
   reg_t npc = fetch.func(p, fetch.insn, pc);
   commit_log(p->get_state(), fetch.insn);

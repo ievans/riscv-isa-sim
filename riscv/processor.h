@@ -72,6 +72,7 @@ public:
   processor_t(sim_t* _sim, mmu_t* _mmu, uint32_t _id);
   ~processor_t();
 
+  void init_tracker();
   void set_debug(bool value);
   void set_histogram(bool value);
   void reset(bool value);

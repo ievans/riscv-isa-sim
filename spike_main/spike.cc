@@ -27,6 +27,7 @@ static void help()
   fprintf(stderr, "  -t                 Allow for tracing memory writes\n");
   fprintf(stderr, "  -h                 Print this help message\n");
   fprintf(stderr, "  -s                 Track tag statistics\n");
+  fprintf(stderr, "  -k                 Turn on dynamic memory tracing\n");
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>     B both powers of 2).\n");
@@ -73,6 +74,7 @@ int main(int argc, char** argv)
   bool debug = false;
   bool histogram = false;
   bool use_watch_loc = false;
+  bool use_tracker = false;
   size_t nprocs = 1;
   size_t mem_mb = 0;
   bool tag_stats = false;
@@ -92,6 +94,7 @@ int main(int argc, char** argv)
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoi(s);});
   parser.option('m', 0, 1, [&](const char* s){mem_mb = atoi(s);});
   parser.option('t', 0, 0, [&](const char* s){use_watch_loc = true;});
+  parser.option('k', 0, 0, [&](const char* s){use_tracker = true;});
   parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
   parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
@@ -123,6 +126,7 @@ int main(int argc, char** argv)
   if (tagtracer) s.get_debug_mmu()->register_memtracer(&*tagtracer);
   for (size_t i = 0; i < nprocs; i++)
   {
+    if (use_tracker) s.get_core(i)->init_tracker();
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
     if (tagtracer) s.get_core(i)->get_mmu()->register_memtracer(&*tagtracer);
