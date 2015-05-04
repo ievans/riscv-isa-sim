@@ -212,7 +212,10 @@ public:
     proc->monitor();
   }
   void track_addr(reg_t addr) {
-    if(proc == NULL || proc->tracker == NULL) return;
+    if(proc == NULL || proc->tracker == NULL) {
+      fprintf(stderr, "track_addr: missing -k option in spike");
+      return;
+    }
     uint64_t paddr = (uint64_t) translate(addr, 1, false, false) - (uint64_t) mem;
     proc->tracker->print_mem(paddr);
   }

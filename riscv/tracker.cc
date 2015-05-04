@@ -154,15 +154,15 @@ void tracker_t::track(insn_t insn) {
 void tracker_t::print(node_t *node, int depth, int addr_depth) {
   if(node == NULL) return;
   for(int i = 0; i < depth; i++)
-    printf("  ");
+    fprintf(stderr, "  ");
   if(depth == MAX_DEPTH) {
-    printf("...\n");
+    fprintf(stderr, "...\n");
     return;
   }
   if(node->val < NXPR)
-    printf("(insn = %s, reg = %s, pc = %016" PRIx64 ")\n", disasm->lookup_name(node->insn), xpr_name[node->val], node->pc);
+    fprintf(stderr, "(insn = %s, reg = %s, pc = %016" PRIx64 ")\n", disasm->lookup_name(node->insn), xpr_name[node->val], node->pc);
   else
-    printf("(insn = %s, addr = %016" PRIx64 ", pc = %016" PRIx64 ")\n", disasm->lookup_name(node->insn), node->val, node->pc);
+    fprintf(stderr, "(insn = %s, addr = %016" PRIx64 ", pc = %016" PRIx64 ")\n", disasm->lookup_name(node->insn), node->val, node->pc);
   print(node->c1, depth+1, addr_depth);
   // Keep track of number of times we take addr subtrees
   // Keep track of how many times we take the addr branch from the root

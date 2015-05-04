@@ -93,6 +93,7 @@ void sim_t::interactive()
     funcs["q"] = &sim_t::interactive_quit;
     funcs["stats"] = &sim_t::interactive_cachestats;
     funcs["reset"] = &sim_t::interactive_cachereset;
+    funcs["track"] = &sim_t::interactive_track;
 
     try
     {
@@ -548,6 +549,29 @@ void sim_t::interactive_dump(const std::string& cmd, const std::vector<std::stri
   } else {
     fprintf(stderr, "Error: dump requires 64-bit aligned address\n");
   }
+}
+
+void sim_t::interactive_track(const std::string& cmd, const std::vector<std::string>& args)
+{
+  int p = 0;
+  int n = args.size();
+
+  if(n > 2) {
+    throw trap_illegal_instruction();
+  }
+
+  if(n == 2) {
+    p = atoi(args[0].c_str());
+  }
+  if(p >= (int)num_cores()) {
+    throw trap_illegal_instruction();
+  }
+
+  processor_t *proc = procs[p];
+  mmu_t *mmu = proc->get_mmu();
+
+  reg_t addr = parse_addr(args[n-1]);
+  mmu->track_addr(addr);
 }
 
 void sim_t::interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args) {

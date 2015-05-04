@@ -94,6 +94,7 @@ private:
   void interactive_watch(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_cachereset(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_track(const std::string& cmd, const std::vector<std::string>& args);
   reg_t get_reg(const std::vector<std::string>& args);
   tagged_reg_t get_reg_tagged(const std::vector<std::string>& args);
   void write_reg(const std::vector<std::string>& args);
