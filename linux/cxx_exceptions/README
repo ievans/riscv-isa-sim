@@ -1,0 +1,20 @@
+C++ exceptions work using this libgcc_s.so.1
+
+The way this works is that RA is blessed on exception handling
+return (specifically, the _Unwind_RaiseException function's
+return if a handler is found in libgcc).
+
+Unfortunately, changing libgcc to do this is difficult,
+as it installs the exception handling context in a way that
+there is no place to insert a settag instruction via
+inline assembly.
+
+Therefore, this libgcc's settag instruction overwrites an
+existing instruction to restore the 11th floating point
+register. Thus, programs that use the 11th floating point
+register and exception handling may have issues.
+
+(Maybe there is a way to compile programs with gcc
+to not use that register?)
+
+May 4th, 2015
