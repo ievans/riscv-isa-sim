@@ -3,10 +3,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#define SIGCAUGHT "Interactive attention signal caught."
  
 static void catch_function(int signo) {
-  puts("Interactive attention signal caught.");
-  return 0;
+  write(1, SIGCAUGHT, sizeof(SIGCAUGHT));
 }
  
 int main(void) {
@@ -19,6 +20,6 @@ int main(void) {
     fputs("Error raising the signal.\n", stderr);
     return EXIT_FAILURE;
   }
-  puts("Exiting.");
+  puts("Exiting.\n");
   return EXIT_SUCCESS;
 }
