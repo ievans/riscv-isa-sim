@@ -149,18 +149,13 @@ void sim_t::interactive_asm(const std::string& cmd, const std::vector<std::strin
   disassembler_t* disassembler = proc->get_disassembler();
 
   reg_t pc = 0;
-  if(args.size() >= 2 && strcmp(args[1].c_str(), "pc") != 0) {
-    pc = parse_addr(args[1]);
+  if(args.size() >= 2) {
+    pc = parse_expr(proc, arg_join(args, 1));
   } else {
     pc = proc->state.pc;
   }
 
-  int n = ASM_SIZE;
-  if(args.size() >= 3) {
-    n = atoi(args[2].c_str());
-  }
-
-  for(int i = 0; i < n; i++) {
+  for(int i = 0; i < ASM_SIZE; i++) {
     insn_fetch_t fetch = mmu->load_insn(pc);
     uint64_t bits = fetch.insn.bits() & ((1ULL << (8 * insn_length(fetch.insn.bits()))) - 1);
     fprintf(stderr, "%3d: 0x%016" PRIx64 " (0x%08" PRIx64 ") %s\n",
@@ -216,7 +211,7 @@ tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
 
 void sim_t::write_reg(const std::vector<std::string>& args)
 {
-  if (args.size() != 3)
+  if (args.size() < 3)
     throw trap_illegal_instruction();
 
   int p = atoi(args[0].c_str());
@@ -227,7 +222,7 @@ void sim_t::write_reg(const std::vector<std::string>& args)
     throw trap_illegal_instruction();
 
   // convert value to reg_t
-  reg_t value = parse_addr(args[2]);
+  reg_t value = parse_expr(procs[p], arg_join(args, 2));
   
   procs[p]->state.XPR.write(r, value);
 }
@@ -311,21 +306,16 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
 
 reg_t sim_t::get_mem(const std::vector<std::string>& args)
 {
-  if(args.size() != 1 && args.size() != 2)
+  if(args.size() < 2)
     throw trap_illegal_instruction();
 
-  std::string addr_str = args[0];
-  mmu_t* mmu = debug_mmu;
-  if(args.size() == 2)
-  {
-    int p = atoi(args[0].c_str());
-    if(p >= (int)num_cores())
-      throw trap_illegal_instruction();
-    mmu = procs[p]->get_mmu();
-    addr_str = args[1];
-  }
+  int p = atoi(args[0].c_str());
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu();
 
-  reg_t addr = parse_addr(addr_str);
+  std::string addr_str = arg_join(args, 1);
+  reg_t addr = parse_expr(procs[p], addr_str);
   reg_t val;
 
   switch(addr % 8)
@@ -345,6 +335,195 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
       break;
   }
   return val;
+}
+
+std::string sim_t::arg_join(const std::vector<std::string>& args, size_t start) {
+  if(start >= args.size())
+    throw trap_illegal_instruction();
+
+  std::stringstream ss;
+  for(size_t i = start; i < args.size(); i++) {
+    if(i != start)
+      ss << " ";
+    ss << args[i];
+  }
+  return ss.str();
+}
+
+reg_t sim_t::parse_val(processor_t* proc, std::string str) {
+  const char *s = str.c_str();
+  // Check for match in regnames
+  for(int i = 0; i < NXPR; i++) {
+    if(strcmp(s, xpr_name[i]) == 0)
+      return proc->state.XPR[i];
+  }
+  // Check for match with pc
+  if(strcmp(s, "pc") == 0)
+    return proc->state.pc;
+
+  // Check for hex
+  if(strlen(s) >= 2 && s[0] == '0' && s[1] == 'x')
+    return parse_addr(str);
+
+  // None of the above, return decimal
+  return strtol(s, NULL, 10);
+}
+
+reg_t sim_t::parse_expr(processor_t* proc, std::string str) {
+  int priority[256];
+  int unary[256];
+  memset(priority, -1, sizeof(priority));
+  memset(unary, -1, sizeof(unary));
+  priority['%'] = 8;
+  priority['/'] = 8;
+  priority['*'] = 8;
+  priority['<'] = 7;
+  priority['>'] = 7;
+  priority['+'] = 6;
+  priority['-'] = 6;
+  priority['&'] = 5;
+  priority['|'] = 4;
+  priority['^'] = 3;
+  priority[0] = 0;
+
+  unary['-'] = 1;
+  unary['~'] = 1;
+
+  std::vector<reg_t> buffer;
+  std::vector<uint8_t> ops;
+  std::vector<uint8_t> unary_ops;
+  int n = str.size();
+  int last = 0;
+
+  for(int i = 0; i <= n; i++) {
+    uint8_t c = 0;
+    if(i < n)
+      c = str[i];
+
+    // ignore extra whitespace
+    if(c == ' ' && i == last) {
+      last = i+1;
+      continue;
+    }
+    // handle unary operators
+    if(buffer.empty() && last == i && unary[c] >= 0) {
+      unary_ops.push_back(c);
+      last = i + 1;
+      continue;
+    }
+
+    bool val_exists = false;
+    reg_t val;
+
+    // Handle parantheses
+    if(c == '(') {
+      if(i != last) {
+        fprintf(stderr, "Failed to parse expression %s: too many values\n", str.c_str());
+        throw trap_illegal_instruction();
+      }
+      // Find the matching ')'
+      int balance = 1;
+      int j;
+      for(j = i+1; j < n; j++) {
+        if(str[j] == '(')
+          balance++;
+        else if(str[j] == ')')
+          balance--;
+        if(balance == 0) break;
+      }
+      if(j == n) {
+        fprintf(stderr, "Failed to parse expression %s: unbalanced parentheses\n", str.c_str());
+        throw trap_illegal_instruction();
+      }
+      // Parse the subexpression
+      val_exists = true;
+      val = parse_expr(proc, str.substr(i+1, j - i - 1));
+
+      // Update state
+      i = j;
+    }
+
+    // Check if we are at the end of a value
+    if(i > last && (c == ' ' || priority[c] >= 0)) {
+      val_exists = true;
+      val = parse_val(proc, str.substr(last, i - last));
+      i -= 1;
+    }
+
+    if(val_exists) {
+      // Apply unary operators
+      while(!unary_ops.empty()) {
+        uint8_t op = unary_ops.back(); unary_ops.pop_back();
+        if(op == '-')
+          val = -val;
+        else if(op == '~')
+          val = ~val;
+      }
+      // Push new value to the value buffer
+      buffer.push_back(val);
+      if(buffer.size() > ops.size() + 1) {
+        fprintf(stderr, "Failed to parse expression %s: too many values\n", str.c_str());
+        throw trap_illegal_instruction();
+      }
+      last = i+1;
+      continue;
+    }
+
+    // Apply operators
+    if(priority[c] >= 0) {
+      if(buffer.size() < ops.size() + 1) {
+        fprintf(stderr, "Failed to parse expression %s: not enough values\n", str.c_str());
+        throw trap_illegal_instruction();
+      }
+      // Handle two-char operators
+      if(c == '<' || c == '>') {
+        if(i+1 >= n || str[i+1] != str[i]) {
+          fprintf(stderr, "Failed to parse expression %s: invalid operator\n", str.c_str());
+          throw trap_illegal_instruction();
+        }
+        i++;
+      }
+      while(!ops.empty() && priority[c] <= priority[ops.back()]) {
+        reg_t val2 = buffer.back(); buffer.pop_back();
+        reg_t val1 = buffer.back(); buffer.pop_back();
+        uint8_t op = ops.back(); ops.pop_back();
+        reg_t val;
+        if(op == '+')
+          val = val1 + val2;
+        else if(op == '-')
+          val = val1 - val2;
+        else if(op == '*')
+          val = val1 * val2;
+        else if(op == '/')
+          val = val1 / val2;
+        else if(op == '%')
+          val = val1 % val2;
+        else if(op == '<')
+          val = val1 << val2;
+        else if(op == '>')
+          val = val1 >> val2;
+        else if(op == '|')
+          val = val1 | val2;
+        else if(op == '&')
+          val = val1 & val2;
+        else if(op == '^')
+          val = val1 ^ val2;
+        else {
+          fprintf(stderr, "Failed to parse expression %s: unimplemented operation\n", str.c_str());
+          throw trap_illegal_instruction();
+        }
+        buffer.push_back(val);
+      }
+      ops.push_back(c);
+      last = i + 1;
+    }
+  }
+
+  if(buffer.empty()) {
+    fprintf(stderr, "Failed to parse expression %s: no value found\n", str.c_str());
+    throw trap_illegal_instruction();
+  }
+  return buffer.back();
 }
 
 reg_t sim_t::parse_addr(std::string addr_str) {
@@ -367,21 +546,17 @@ tag_t sim_t::parse_tag(std::string tag_str) {
 
 tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
 {
-  if(args.size() != 1 && args.size() != 2)
+  if(args.size() < 2)
     throw trap_illegal_instruction();
 
-  std::string addr_str = args[0];
-  mmu_t* mmu = debug_mmu;
-  if(args.size() == 2)
-  {
-    int p = atoi(args[0].c_str());
-    if(p >= (int)num_cores())
-      throw trap_illegal_instruction();
-    mmu = procs[p]->get_mmu();
-    addr_str = args[1];
-  }
+  int p = atoi(args[0].c_str());
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  processor_t* proc = procs[p];
+  mmu_t* mmu = proc->get_mmu();
 
-  reg_t addr = parse_addr(addr_str);
+  std::string addr_str = arg_join(args, 1);
+  reg_t addr = parse_expr(proc, addr_str);
   tagged_reg_t val;
 
   switch(addr % 8)
@@ -422,9 +597,9 @@ void sim_t::do_watch(size_t proc, reg_t addr)
 
 void sim_t::interactive_watch(const std::string& cmd, const std::vector<std::string>& args)
 {
-  if(args.size() != 2)
+  if(args.size() < 2)
     throw trap_illegal_instruction();
-  std::string addr_str = args[1];
+  std::string addr_str = arg_join(args, 1);
 
   // Check processor number and get mmu.
   size_t p = strtoul(args[0].c_str(), NULL, 10);
@@ -433,7 +608,7 @@ void sim_t::interactive_watch(const std::string& cmd, const std::vector<std::str
   mmu_t* mmu = procs[p]->get_mmu(); 
 
   // Process the provided address.
-  reg_t addr = parse_addr(addr_str);
+  reg_t addr = parse_expr(procs[p], addr_str);
  
   // Tell the processor to watch. 
   do_watch(p, addr);
@@ -490,21 +665,16 @@ tagged_reg_t dump_buffer[DUMP_SIZE];
 reg_t dump_addr;
 tagged_reg_t* sim_t::get_dump_tagged(const std::vector<std::string>& args)
 {
-  if(args.size() != 1 && args.size() != 2)
+  if(args.size() < 2)
     throw trap_illegal_instruction();
 
-  std::string addr_str = args[0];
-  mmu_t* mmu = debug_mmu;
-  if(args.size() == 2)
-  {
-    int p = atoi(args[0].c_str());
-    if(p >= (int)num_cores())
-      throw trap_illegal_instruction();
-    mmu = procs[p]->get_mmu();
-    addr_str = args[1];
-  }
+  int p = atoi(args[0].c_str());
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu();
 
-  reg_t addr = parse_addr(addr_str);
+  std::string addr_str = arg_join(args, 1);
+  reg_t addr = parse_expr(procs[p], addr_str);
 
   if(addr % 8 != 0) {
     return NULL;
@@ -553,16 +723,11 @@ void sim_t::interactive_dump(const std::string& cmd, const std::vector<std::stri
 
 void sim_t::interactive_track(const std::string& cmd, const std::vector<std::string>& args)
 {
-  int p = 0;
-  int n = args.size();
-
-  if(n > 2) {
+  if(args.size() < 2) {
     throw trap_illegal_instruction();
   }
 
-  if(n == 2) {
-    p = atoi(args[0].c_str());
-  }
+  int p = atoi(args[0].c_str());
   if(p >= (int)num_cores()) {
     throw trap_illegal_instruction();
   }
@@ -570,7 +735,7 @@ void sim_t::interactive_track(const std::string& cmd, const std::vector<std::str
   processor_t *proc = procs[p];
   mmu_t *mmu = proc->get_mmu();
 
-  reg_t addr = parse_addr(args[n-1]);
+  reg_t addr = parse_expr(proc, arg_join(args, 1));
   mmu->track_addr(addr);
 }
 

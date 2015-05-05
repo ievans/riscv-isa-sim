@@ -102,6 +102,9 @@ private:
   reg_t get_freg(const std::vector<std::string>& args);
   reg_t parse_addr(std::string addr_str);
   tag_t parse_tag(std::string tag_str);
+  reg_t parse_val(processor_t* proc, std::string str);
+  reg_t parse_expr(processor_t* proc, std::string str);
+  std::string arg_join(const std::vector<std::string>& args, size_t start);
   reg_t get_mem(const std::vector<std::string>& args);
   tagged_reg_t get_mem_tagged(const std::vector<std::string>& args);
   tagged_reg_t* get_dump_tagged(const std::vector<std::string>& args);
