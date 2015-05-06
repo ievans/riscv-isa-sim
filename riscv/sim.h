@@ -79,7 +79,6 @@ private:
   void interactive_pc(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_asm(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_reg(const std::string& cmd, const std::vector<std::string>& args);
-  void interactive_reg_t(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_wmem(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_wmem_t(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_wreg(const std::string& cmd, const std::vector<std::string>& args);
@@ -88,7 +87,6 @@ private:
   void interactive_fregs(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_fregd(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_mem(const std::string& cmd, const std::vector<std::string>& args);
-  void interactive_mem_t(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_dump(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_str(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_until(const std::string& cmd, const std::vector<std::string>& args);

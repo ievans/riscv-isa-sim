@@ -74,15 +74,13 @@ void sim_t::interactive()
     funcs["dump"] = &sim_t::interactive_dump;
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
-    funcs["mem"] = &sim_t::interactive_mem;
-    funcs["memt"] = &sim_t::interactive_mem_t;
+    funcs["m"] = &sim_t::interactive_mem;
     funcs["pc"] = &sim_t::interactive_pc;
     funcs["q"] = &sim_t::interactive_quit;
-    funcs["r"] = &sim_t::interactive_run_noisy;
+    funcs["r"] = &sim_t::interactive_regs;
     funcs["reg"] = &sim_t::interactive_reg;
-    funcs["regs"] = &sim_t::interactive_regs;
-    funcs["regt"] = &sim_t::interactive_reg_t;
     funcs["reset"] = &sim_t::interactive_cachereset;
+    funcs["rn"] = &sim_t::interactive_run_noisy;
     funcs["rs"] = &sim_t::interactive_run_silent;
     funcs["stats"] = &sim_t::interactive_cachestats;
     funcs["str"] = &sim_t::interactive_str;
@@ -289,11 +287,6 @@ reg_t sim_t::get_freg(const std::vector<std::string>& args)
 
 void sim_t::interactive_reg(const std::string& cmd, const std::vector<std::string>& args)
 {
-  fprintf(stderr, "0x%016" PRIx64 "\n", get_reg(args));
-}
-
-void sim_t::interactive_reg_t(const std::string& cmd, const std::vector<std::string>& args)
-{
   tagged_reg_t contents = get_reg_tagged(args);
   fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
 }
@@ -410,6 +403,39 @@ void sim_t::write_mem_t(const std::vector<std::string>& args)
   tag_t tag = parse_tag(args.back());
 
   mmu->store_tag_value(tag, addr);
+}
+
+tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
+{
+  if(args.size() < 2)
+    throw trap_illegal_instruction();
+
+  int p = atoi(args[0].c_str());
+  if(p >= (int)num_cores())
+    throw trap_illegal_instruction();
+  mmu_t* mmu = procs[p]->get_mmu();
+
+  std::string addr_str = arg_join(args, 1);
+  reg_t addr = parse_expr(procs[p], addr_str);
+  tagged_reg_t val;
+
+  switch(addr % 8)
+  {
+    case 0:
+      val = mmu->load_tagged_uint64(addr);
+      break;
+    case 4:
+      val = mmu->load_tagged_uint32(addr);
+      break;
+    case 2:
+    case 6:
+      val = mmu->load_tagged_uint16(addr);
+      break;
+    default:
+      val = mmu->load_tagged_uint8(addr);
+      break;
+  }
+  return val;
 }
 
 reg_t sim_t::get_mem(const std::vector<std::string>& args)
@@ -654,39 +680,7 @@ tag_t sim_t::parse_tag(const std::string& tag_str) {
   return tag;
 }
 
-tagged_reg_t sim_t::get_mem_tagged(const std::vector<std::string>& args)
-{
-  if(args.size() < 2)
-    throw trap_illegal_instruction();
 
-  int p = atoi(args[0].c_str());
-  if(p >= (int)num_cores())
-    throw trap_illegal_instruction();
-  processor_t* proc = procs[p];
-  mmu_t* mmu = proc->get_mmu();
-
-  std::string addr_str = arg_join(args, 1);
-  reg_t addr = parse_expr(proc, addr_str);
-  tagged_reg_t val;
-
-  switch(addr % 8)
-  {
-    case 0:
-      val = mmu->load_tagged_uint64(addr);
-      break;
-    case 4:
-      val = mmu->load_tagged_uint32(addr);
-      break;
-    case 2:
-    case 6:
-      val = mmu->load_tagged_uint16(addr);
-      break;
-    default:
-      val = mmu->load_tagged_uint8(addr);
-      break;
-  }
-  return val;
-}
 
 void sim_t::do_watch(size_t proc, reg_t addr)
 {
@@ -798,11 +792,6 @@ tagged_reg_t* sim_t::get_dump_tagged(const std::vector<std::string>& args)
 }
 
 void sim_t::interactive_mem(const std::string& cmd, const std::vector<std::string>& args)
-{
-  fprintf(stderr, "0x%016" PRIx64 "\n", get_mem(args));
-}
-
-void sim_t::interactive_mem_t(const std::string& cmd, const std::vector<std::string>& args)
 {
   tagged_reg_t contents = get_mem_tagged(args);
   fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
@@ -986,14 +975,14 @@ void sim_t::interactive_untilnot(const std::string& cmd, const std::vector<std::
 
   // returns reg_t
   auto func = args[0] == "reg"  ? &sim_t::get_reg :
-    args[0] == "pc"   ? &sim_t::get_pc :
-    args[0] == "mem"  ? &sim_t::get_mem :
-    NULL;
+              args[0] == "pc"   ? &sim_t::get_pc :
+              args[0] == "mem"  ? &sim_t::get_mem :
+              NULL;
 
   // returns tagged_reg_t
   auto func_t = args[0] == "regt" ? &sim_t::get_reg_tagged :
-    args[0] == "memt" ? &sim_t::get_mem_tagged :
-    NULL;
+                args[0] == "memt" ? &sim_t::get_mem_tagged :
+                NULL;
 
   if (func == NULL && func_t == NULL)
     return;
