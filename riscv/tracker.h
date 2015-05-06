@@ -26,6 +26,9 @@ public:
   void print_mem(uint64_t paddr) {
     print(mem[paddr / MEM_TO_TAG_RATIO]);
   }
+  void print_reg(int r) {
+    print(regs[r]);
+  }
   void set_debug(int debug) {
     this->debug = debug;
   }

@@ -28,6 +28,7 @@ tracker_t::tracker_t(processor_t* _proc, size_t _sz)
 
 void tracker_t::track_load(uint64_t paddr) {
   if(!is_mem_insn) return;
+  is_mem_insn = false;
   int dst = last_insn.rd();
   if(dst == 0) return;
   uint64_t ind = paddr / MEM_TO_TAG_RATIO;
@@ -55,6 +56,7 @@ void tracker_t::track_load(uint64_t paddr) {
 
 void tracker_t::track_store(uint64_t paddr, uint64_t addr) {
   if(!is_mem_insn) return;
+  is_mem_insn = false;
   uint64_t ind = paddr / MEM_TO_TAG_RATIO;
   int reg = last_insn.rs2();
 

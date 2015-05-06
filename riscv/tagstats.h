@@ -30,7 +30,7 @@ class tag_memtracer_t : public memtracer_t
     int i;
     for(i = 0; i < 256; i++)
       n_accesses += count[i];
-    printf("Tags have been stored %u times\n", (uint32_t) n_accesses);
+    printf("Active tags: %u\n", (uint32_t) n_accesses);
     for(i = 0; i < 256; i++) {
       if(count[i] > 0) {
         double f = (double) count[i] / n_accesses;

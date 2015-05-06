@@ -93,7 +93,8 @@ void sim_t::interactive()
     funcs["q"] = &sim_t::interactive_quit;
     funcs["stats"] = &sim_t::interactive_cachestats;
     funcs["reset"] = &sim_t::interactive_cachereset;
-    funcs["track"] = &sim_t::interactive_track;
+    funcs["tmem"] = &sim_t::interactive_track_mem;
+    funcs["treg"] = &sim_t::interactive_track_reg;
 
     try
     {
@@ -176,15 +177,20 @@ reg_t sim_t::get_pc(const std::vector<std::string>& args)
   return procs[p]->state.pc;
 }
 
+int sim_t::parse_reg(const std::string& str) {
+  int r = std::find(xpr_name, xpr_name + NXPR, str) - xpr_name;
+  if (r == NXPR)
+    r = atoi(str.c_str());
+  return r;
+}
+
 reg_t sim_t::get_reg(const std::vector<std::string>& args)
 {
   if(args.size() != 2)
     throw trap_illegal_instruction();
 
   int p = atoi(args[0].c_str());
-  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
-  if (r == NXPR)
-    r = atoi(args[1].c_str());
+  int r = parse_reg(args[1]);
   if(p >= (int)num_cores() || r >= NXPR)
     throw trap_illegal_instruction();
 
@@ -197,9 +203,7 @@ tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
     throw trap_illegal_instruction();
 
   int p = atoi(args[0].c_str());
-  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
-  if (r == NXPR)
-    r = atoi(args[1].c_str());
+  int r = parse_reg(args[1]);
   if(p >= (int)num_cores() || r >= NXPR)
     throw trap_illegal_instruction();
 
@@ -215,9 +219,7 @@ void sim_t::write_reg(const std::vector<std::string>& args)
     throw trap_illegal_instruction();
 
   int p = atoi(args[0].c_str());
-  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
-  if (r == NXPR)
-    r = atoi(args[1].c_str());
+  int r = parse_reg(args[1]);
   if (p >= (int)num_cores() || r >= NXPR)
     throw trap_illegal_instruction();
 
@@ -233,9 +235,7 @@ void sim_t::write_reg_t(const std::vector<std::string>& args)
     throw trap_illegal_instruction();
 
   int p = atoi(args[0].c_str());
-  int r = std::find(xpr_name, xpr_name + NXPR, args[1]) - xpr_name;
-  if (r == NXPR)
-    r = atoi(args[1].c_str());
+  int r = parse_reg(args[1]);
   if (p >= (int)num_cores() || r >= NXPR)
     throw trap_illegal_instruction();
 
@@ -350,7 +350,7 @@ std::string sim_t::arg_join(const std::vector<std::string>& args, size_t start) 
   return ss.str();
 }
 
-reg_t sim_t::parse_val(processor_t* proc, std::string str) {
+reg_t sim_t::parse_val(processor_t* proc, const std::string& str) {
   const char *s = str.c_str();
   // Check for match in regnames
   for(int i = 0; i < NXPR; i++) {
@@ -369,7 +369,7 @@ reg_t sim_t::parse_val(processor_t* proc, std::string str) {
   return strtol(s, NULL, 10);
 }
 
-reg_t sim_t::parse_expr(processor_t* proc, std::string str) {
+reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
   int priority[256];
   int unary[256];
   memset(priority, -1, sizeof(priority));
@@ -526,14 +526,14 @@ reg_t sim_t::parse_expr(processor_t* proc, std::string str) {
   return buffer.back();
 }
 
-reg_t sim_t::parse_addr(std::string addr_str) {
+reg_t sim_t::parse_addr(const std::string& addr_str) {
   reg_t addr = strtol(addr_str.c_str(),NULL,16);
   if(addr == LONG_MAX)
     addr = strtoul(addr_str.c_str(),NULL,16);
   return addr;
 }
 
-tag_t sim_t::parse_tag(std::string tag_str) {
+tag_t sim_t::parse_tag(const std::string& tag_str) {
   reg_t parsed_tag = parse_addr(tag_str);
   
   // check for overflow
@@ -721,7 +721,7 @@ void sim_t::interactive_dump(const std::string& cmd, const std::vector<std::stri
   }
 }
 
-void sim_t::interactive_track(const std::string& cmd, const std::vector<std::string>& args)
+void sim_t::interactive_track_mem(const std::string& cmd, const std::vector<std::string>& args)
 {
   if(args.size() < 2) {
     throw trap_illegal_instruction();
@@ -737,6 +737,22 @@ void sim_t::interactive_track(const std::string& cmd, const std::vector<std::str
 
   reg_t addr = parse_expr(proc, arg_join(args, 1));
   mmu->track_addr(addr);
+}
+
+void sim_t::interactive_track_reg(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if(args.size() != 2) {
+    throw trap_illegal_instruction();
+  }
+
+  int p = atoi(args[0].c_str());
+  int r = parse_reg(args[1]);
+  if(p >= (int)num_cores() || r >= NXPR) {
+    throw trap_illegal_instruction();
+  }
+
+  mmu_t *mmu = procs[p]->get_mmu();
+  mmu->track_reg(r);
 }
 
 void sim_t::interactive_cachestats(const std::string& cmd, const std::vector<std::string>& args) {

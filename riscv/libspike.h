@@ -15,9 +15,9 @@
 // Then add the function here, making sure that the order is the same
 // Don't add extra newlines!
 static int base = __LINE__ + 1;
-ADD_FN(cache_reset)
-ADD_FN(update_cachestats)
-ADD_FN(monitor)
+ADD_FN(libspike_reset)
+ADD_FN(libspike_cachestats)
+ADD_FN(libspike_monitor)
 ADD_FN(libspike_track)
 
 typedef struct {
@@ -40,11 +40,11 @@ typedef union {
   uint8_t buf[4096];
 } libspike_page_u;
 
-inline cache_info_t* get_cache_info() {
+inline cache_info_t* libspike_get_cache_info() {
   return &(((libspike_page_u*) (LIBSPIKE_BASE_ADDR))->cache_info);
 }
 
-inline libspike_args_t* get_libspike_args() {
+inline libspike_args_t* libspike_get_args() {
   return &(((libspike_page_u*) (LIBSPIKE_BASE_ADDR))->args);
 }
 

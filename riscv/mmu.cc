@@ -34,7 +34,7 @@ void mmu_t::init_libspike() {
   libspike_funcs.push_back(&mmu_t::reset_caches);
   libspike_funcs.push_back(&mmu_t::update_cachestats);
   libspike_funcs.push_back(&mmu_t::monitor);
-  libspike_funcs.push_back(&mmu_t::libspike_track);
+  libspike_funcs.push_back(&mmu_t::track);
 }
 
 void mmu_t::reset_caches() {
