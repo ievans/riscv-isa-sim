@@ -232,6 +232,10 @@ void sim_t::print_regs(const std::vector<std::string>& args)
       throw trap_illegal_instruction();
   }
 
+  // print PC as well
+  fprintf(stderr, "%3s: 0x%016" PRIx64 " tag: ------  ",
+    "pc", procs[p]->state.pc);
+
   // don't print zero reg
   size_t reg_num;
   for (reg_num = 1; reg_num < NXPR; ++reg_num) {
