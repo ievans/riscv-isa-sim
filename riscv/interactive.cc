@@ -10,7 +10,6 @@
 #include <iostream>
 #include <climits>
 #include <cinttypes>
-#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sstream>
@@ -70,31 +69,34 @@ void sim_t::interactive()
     typedef void (sim_t::*interactive_func)(const std::string&, const std::vector<std::string>&);
     std::map<std::string,interactive_func> funcs;
 
+    funcs["asm"] = &sim_t::interactive_asm;
     funcs["c"] = &sim_t::interactive_run_silent;
-    funcs["r"] = &sim_t::interactive_run_noisy;
-    funcs["rs"] = &sim_t::interactive_run_silent;
-    funcs["reg"] = &sim_t::interactive_reg;
-    funcs["regt"] = &sim_t::interactive_reg_t;
-    funcs["wreg"] = &sim_t::interactive_wreg;
-    funcs["wregt"] = &sim_t::interactive_wreg_t;
+    funcs["dump"] = &sim_t::interactive_dump;
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
     funcs["mem"] = &sim_t::interactive_mem;
     funcs["memt"] = &sim_t::interactive_mem_t;
-    funcs["dump"] = &sim_t::interactive_dump;
-    funcs["watch"] = &sim_t::interactive_watch;
-    funcs["when"] = &sim_t::interactive_when;
     funcs["pc"] = &sim_t::interactive_pc;
-    funcs["asm"] = &sim_t::interactive_asm;
-    funcs["str"] = &sim_t::interactive_str;
-    funcs["until"] = &sim_t::interactive_until;
-    funcs["untilnot"] = &sim_t::interactive_untilnot;
-    funcs["while"] = &sim_t::interactive_until;
     funcs["q"] = &sim_t::interactive_quit;
-    funcs["stats"] = &sim_t::interactive_cachestats;
+    funcs["r"] = &sim_t::interactive_run_noisy;
+    funcs["reg"] = &sim_t::interactive_reg;
+    funcs["regs"] = &sim_t::interactive_regs;
+    funcs["regt"] = &sim_t::interactive_reg_t;
     funcs["reset"] = &sim_t::interactive_cachereset;
+    funcs["rs"] = &sim_t::interactive_run_silent;
+    funcs["stats"] = &sim_t::interactive_cachestats;
+    funcs["str"] = &sim_t::interactive_str;
     funcs["tmem"] = &sim_t::interactive_track_mem;
     funcs["treg"] = &sim_t::interactive_track_reg;
+    funcs["until"] = &sim_t::interactive_until;
+    funcs["untilnot"] = &sim_t::interactive_untilnot;
+    funcs["watch"] = &sim_t::interactive_watch;
+    funcs["when"] = &sim_t::interactive_when;
+    funcs["while"] = &sim_t::interactive_until;
+    funcs["wmem"] = &sim_t::interactive_wmem;
+    funcs["wmemt"] = &sim_t::interactive_wmem_t;
+    funcs["wreg"] = &sim_t::interactive_wreg;
+    funcs["wregt"] = &sim_t::interactive_wreg_t;
 
     try
     {
@@ -213,6 +215,31 @@ tagged_reg_t sim_t::get_reg_tagged(const std::vector<std::string>& args)
   return tr;
 }
 
+void sim_t::print_regs(const std::vector<std::string>& args)
+{
+  int p = 0;
+  if (args.size() > 1)
+    throw trap_illegal_instruction();
+  else if (args.size() == 1) {
+    p = atoi(args[0].c_str());
+    if (p >= (int)num_cores())
+      throw trap_illegal_instruction();
+  }
+
+  // don't print zero reg
+  size_t reg_num;
+  for (reg_num = 1; reg_num < NXPR; ++reg_num) {
+    fprintf(stderr, "%3s: 0x%016" PRIx64 " tag: 0x%04x",
+      xpr_name[reg_num], procs[p]->state.XPR[reg_num],
+      procs[p]->state.XPR.read_tag(reg_num));
+    if (reg_num % 2 == 1) {
+      fprintf(stderr, "\n");
+    } else {
+      fprintf(stderr, "  ");
+    }
+  }
+}
+
 void sim_t::write_reg(const std::vector<std::string>& args)
 {
   if (args.size() < 3)
@@ -271,6 +298,23 @@ void sim_t::interactive_reg_t(const std::string& cmd, const std::vector<std::str
   fprintf(stderr, "0x%016" PRIx64 " tag: 0x%04x\n", contents.val, contents.tag);
 }
 
+void sim_t::interactive_regs(const std::string& cmd, const std::vector<std::string>& args)
+{
+  print_regs(args);
+}
+
+void sim_t::interactive_wmem(const std::string& cmd, const std::vector<std::string>& args)
+{
+  write_mem(args);
+  fprintf(stderr, "Write success\n");    
+}
+
+void sim_t::interactive_wmem_t(const std::string& cmd, const std::vector<std::string>& args)
+{
+  write_mem_t(args);
+  fprintf(stderr, "Tag write success\n");
+}
+
 void sim_t::interactive_wreg(const std::string& cmd, const std::vector<std::string>& args)
 {
   write_reg(args);
@@ -302,6 +346,70 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
   fpr f;
   f.r = get_freg(args);
   fprintf(stderr, "%g\n",f.d);
+}
+
+void sim_t::write_mem(const std::vector<std::string>& args)
+{
+  size_t p = 0, start_of_addr = 0;
+  if (args.size() < 2)
+    throw trap_illegal_instruction();
+  else if (args.size() >= 3) {
+    // check processor number.
+    p = strtoul(args[0].c_str(), NULL, 10);
+    if(p >= num_cores())
+      throw trap_illegal_instruction();
+    start_of_addr = 1;
+  }
+  mmu_t* mmu = procs[p]->get_mmu(); 
+  
+  // check passed address (can be an expression; last arg is the value).
+  std::string addr_str = arg_join(args, start_of_addr, args.size() - 1);
+  reg_t addr = parse_expr(procs[p], addr_str);
+
+  // parse value
+  reg_t value = parse_addr(args.back());
+
+  fprintf(stderr, "about to call store\n");
+  switch(addr % 8)
+  {
+    case 0:
+      mmu->store_uint64(addr, value);
+      break;
+    case 4:
+      mmu->store_uint32(addr, value);
+      break;
+    case 2:
+    case 6:
+      mmu->store_uint16(addr, value);
+      break;
+    default:
+      mmu->store_uint8(addr, value);
+      break;
+  }
+}
+
+void sim_t::write_mem_t(const std::vector<std::string>& args)
+{
+  size_t p = 0, start_of_addr = 0;
+  if (args.size() < 2)
+    throw trap_illegal_instruction();
+  else if (args.size() >= 3) {
+    // check processor number.
+    p = strtoul(args[0].c_str(), NULL, 10);
+    if(p >= num_cores())
+      throw trap_illegal_instruction();
+    start_of_addr = 1;
+  }
+  mmu_t* mmu = procs[p]->get_mmu(); 
+  
+  // check passed address (can be an expression; last arg is the value).
+  std::string addr_str = arg_join(args, start_of_addr, args.size() - 1);
+  reg_t addr = parse_expr(procs[p], addr_str);
+
+  // parse tag (will warn on overflow)
+  tag_t tag = parse_tag(args.back());
+
+  mmu->store_tag_value(tag, addr);
 }
 
 reg_t sim_t::get_mem(const std::vector<std::string>& args)
@@ -337,12 +445,14 @@ reg_t sim_t::get_mem(const std::vector<std::string>& args)
   return val;
 }
 
-std::string sim_t::arg_join(const std::vector<std::string>& args, size_t start) {
-  if(start >= args.size())
+std::string sim_t::arg_join(const std::vector<std::string>& args, size_t start, size_t end) {
+  if(start >= args.size() || ((end != 0) && (end < start)) )
     throw trap_illegal_instruction();
 
   std::stringstream ss;
-  for(size_t i = start; i < args.size(); i++) {
+  if (end == 0) // don't provide an end
+    end = args.size();
+  for(size_t i = start; i < end; i++) {
     if(i != start)
       ss << " ";
     ss << args[i];
@@ -601,7 +711,7 @@ void sim_t::interactive_watch(const std::string& cmd, const std::vector<std::str
     throw trap_illegal_instruction();
   std::string addr_str = arg_join(args, 1);
 
-  // Check processor number and get mmu.
+  // check processor number and get mmu.
   size_t p = strtoul(args[0].c_str(), NULL, 10);
   if(p >= num_cores())
     throw trap_illegal_instruction();
