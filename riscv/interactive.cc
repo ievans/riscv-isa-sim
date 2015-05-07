@@ -95,6 +95,7 @@ void sim_t::interactive()
     funcs["wmemt"] = &sim_t::interactive_wmem_t;
     funcs["wreg"] = &sim_t::interactive_wreg;
     funcs["wregt"] = &sim_t::interactive_wreg_t;
+    funcs["eval"] = &sim_t::interactive_eval;
 
     try
     {
@@ -565,6 +566,7 @@ reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
 
   unary['-'] = 1;
   unary['~'] = 1;
+  unary['*'] = 1;
 
   std::vector<reg_t> buffer;
   std::vector<uint8_t> ops;
@@ -583,7 +585,7 @@ reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
       continue;
     }
     // handle unary operators
-    if(buffer.empty() && last == i && unary[c] >= 0) {
+    if((buffer.size() == ops.size() || priority[c] < 0) && last == i && unary[c] >= 0) {
       unary_ops.push_back(c);
       last = i + 1;
       continue;
@@ -595,7 +597,7 @@ reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
     // Handle parantheses
     if(c == '(') {
       if(i != last) {
-        fprintf(stderr, "Failed to parse expression %s: too many values\n", str.c_str());
+        fprintf(stderr, "Failed to parse expression %s: consecutive values\n", str.c_str());
         throw trap_illegal_instruction();
       }
       // Find the matching ')'
@@ -635,11 +637,30 @@ reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
           val = -val;
         else if(op == '~')
           val = ~val;
+        else if(op == '*') {
+          mmu_t* mmu = proc->get_mmu();
+          switch(val % 8)
+          {
+            case 0:
+              val = mmu->load_tagged_uint64(val).val;
+              break;
+            case 4:
+              val = mmu->load_tagged_uint32(val).val;
+              break;
+            case 2:
+            case 6:
+              val = mmu->load_tagged_uint16(val).val;
+              break;
+            default:
+              val = mmu->load_tagged_uint8(val).val;
+              break;
+          }
+        }
       }
       // Push new value to the value buffer
       buffer.push_back(val);
       if(buffer.size() > ops.size() + 1) {
-        fprintf(stderr, "Failed to parse expression %s: too many values\n", str.c_str());
+        fprintf(stderr, "Failed to parse expression %s: consecutive values\n", str.c_str());
         throw trap_illegal_instruction();
       }
       last = i+1;
@@ -649,7 +670,11 @@ reg_t sim_t::parse_expr(processor_t* proc, const std::string& str) {
     // Apply operators
     if(priority[c] >= 0) {
       if(buffer.size() < ops.size() + 1) {
-        fprintf(stderr, "Failed to parse expression %s: not enough values\n", str.c_str());
+        fprintf(stderr, "Failed to parse expression %s: consecutive operators\n", str.c_str());
+        throw trap_illegal_instruction();
+      }
+      if(unary_ops.size() > 0) {
+        fprintf(stderr, "Failed to parse expression %s: unary operator applied to binary operator\n", str.c_str());
         throw trap_illegal_instruction();
       }
       // Handle two-char operators
@@ -873,6 +898,17 @@ void sim_t::interactive_track_mem(const std::string& cmd, const std::vector<std:
 
   reg_t addr = parse_expr(proc, arg_join(args, 1));
   mmu->track_addr(addr);
+}
+
+void sim_t::interactive_eval(const std::string& cmd, const std::vector<std::string>& args)
+{
+  if(args.size() < 1) {
+    throw trap_illegal_instruction();
+  }
+
+  processor_t *proc = procs[0];
+  reg_t val = parse_expr(proc, arg_join(args, 0));
+  fprintf(stderr, "0x%016" PRIx64 "\n", val);
 }
 
 void sim_t::interactive_track_reg(const std::string& cmd, const std::vector<std::string>& args)
