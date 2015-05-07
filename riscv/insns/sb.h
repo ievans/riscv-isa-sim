@@ -1,7 +1,7 @@
 reg_t tag = TAG_S2;
 
 #ifdef TAG_POLICY_NO_PARTIAL_COPY
-tag = CLEAR_PC_TAG(tag);
+tag = TAG_DATA;
 #endif
 
 MMU.store_tagged_uint8(RS1 + insn.s_imm(), RS2, TAG_S2);
