@@ -162,7 +162,7 @@ static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
   printf("Insn: %s\n", p->get_disassembler()->disassemble(fetch.insn).c_str());
   */
   if(p->tracker != NULL)
-    p->tracker->track(fetch.insn);
+    p->tracker->track(fetch.insn, pc);
 
   reg_t npc = fetch.func(p, fetch.insn, pc);
   commit_log(p->get_state(), fetch.insn);
