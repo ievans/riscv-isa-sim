@@ -26,6 +26,7 @@ public:
   void set_histogram(bool value);
   void set_cache_level(bool value);
   void set_procs_debug(bool value);
+  void set_procs_noisy(bool value);
   htif_isasim_t* get_htif() { return htif.get(); }
   mmu_t* get_debug_mmu() { return debug_mmu; }
 
@@ -98,6 +99,9 @@ private:
   void interactive_track_mem(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_track_reg(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_eval(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_insn(const std::string& cmd, const std::vector<std::string>& args);
+  std::string get_insn(const std::vector<std::string>& args);
+  std::string get_insn_name(const std::vector<std::string>& args);
   tagged_reg_t get_reg(const std::vector<std::string>& args);
   void write_mem(const std::vector<std::string>& args);
   void write_mem_t(const std::vector<std::string>& args);
@@ -116,6 +120,7 @@ private:
   tagged_reg_t get_pc(const std::vector<std::string>& args);
   reg_t get_tohost(const std::vector<std::string>& args);
   void do_watch(size_t proc, reg_t addr);
+  void do_until(const std::string& cmd, bool invert, const std::vector<std::string>& args);
   reg_t get_when(size_t proc, size_t numToGet);
 
   friend class htif_isasim_t;

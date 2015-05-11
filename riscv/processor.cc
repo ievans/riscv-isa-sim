@@ -21,7 +21,7 @@
 
 processor_t::processor_t(sim_t* _sim, mmu_t* _mmu, uint32_t _id)
   : sim(_sim), mmu(_mmu), ext(NULL), disassembler(new disassembler_t),
-    id(_id), run(false), debug(false), serialized(false)
+    id(_id), run(false), debug(false), noisy(false), serialized(false)
 {
   reset(true);
   mmu->set_processor(this);
@@ -88,6 +88,11 @@ void processor_t::set_debug(bool value)
   debug = value;
   if (ext)
     ext->set_debug(value);
+}
+
+void processor_t::set_noisy(bool value)
+{
+  noisy = value;
 }
 
 void processor_t::set_histogram(bool value)
@@ -203,7 +208,8 @@ void processor_t::step(size_t n)
       while (instret++ < n)
       {
         insn_fetch_t fetch = mmu->load_insn(pc);
-        disasm(fetch.insn);
+        if (noisy)
+          disasm(fetch.insn);
         pc = execute_insn(this, pc, fetch);
       }
     }
@@ -238,7 +244,7 @@ void processor_t::step(size_t n)
 
 reg_t processor_t::take_trap(trap_t& t, reg_t epc)
 {
-  if (debug)
+  if (debug && noisy)
     fprintf(stderr, "core %3d: exception %s, epc 0x%016" PRIx64 "\n",
             id, t.name(), epc);
 

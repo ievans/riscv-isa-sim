@@ -60,6 +60,7 @@ void sim_t::interactive()
     if (!(ss >> cmd))
     {
       set_procs_debug(true);
+      set_procs_noisy(true);
       step(1);
       continue;
     }
@@ -76,6 +77,7 @@ void sim_t::interactive()
     funcs["eval"] = &sim_t::interactive_eval;
     funcs["fregs"] = &sim_t::interactive_fregs;
     funcs["fregd"] = &sim_t::interactive_fregd;
+    funcs["insn"] = &sim_t::interactive_insn;
     funcs["m"] = &sim_t::interactive_mem;
     funcs["pc"] = &sim_t::interactive_pc;
     funcs["q"] = &sim_t::interactive_quit;
@@ -123,6 +125,7 @@ void sim_t::interactive_run(const std::string& cmd, const std::vector<std::strin
   size_t steps = args.size() ? atoll(args[0].c_str()) : -1;
   ctrlc_pressed = false;
   set_procs_debug(noisy);
+  set_procs_noisy(noisy);
   for (size_t i = 0; i < steps && !ctrlc_pressed && !htif->done(); i++)
     step(1);
 }
@@ -364,6 +367,39 @@ void sim_t::interactive_fregd(const std::string& cmd, const std::vector<std::str
   fpr f;
   f.r = get_freg(args);
   fprintf(stderr, "%g\n",f.d);
+}
+
+void sim_t::interactive_insn(const std::string& cmd, const std::vector<std::string>& args)
+{
+  std::cerr << get_insn(args) << "\n";
+}
+
+std::string sim_t::get_insn(const std::vector<std::string>& args)
+{
+  // Get processor number.
+  size_t p = 0;
+  if (!args.empty()) {
+    p = strtoul(args[0].c_str(), NULL, 10);
+    if (p >= num_cores())
+      throw trap_illegal_instruction();
+  }
+
+  // Get dissassembler & mmu.
+  processor_t* proc = procs[p];
+  mmu_t* mmu = proc->get_mmu();
+  disassembler_t* disas = proc->get_disassembler();
+
+  // Get details of insn from mmu & use disassembler to get str.
+  reg_t pc = proc->state.pc;
+  insn_fetch_t fetch = mmu->load_insn(pc);
+  std::string ret = disas->disassemble(fetch.insn);
+  return ret;
+}
+
+std::string sim_t::get_insn_name(const std::vector<std::string>& args)
+{
+  std::string insn = get_insn(args);
+  return insn.substr(0, insn.find(' '));
 }
 
 void sim_t::write_mem(const std::vector<std::string>& args)
@@ -926,28 +962,44 @@ void sim_t::interactive_str(const std::string& cmd, const std::vector<std::strin
 
 void sim_t::interactive_until(const std::string& cmd, const std::vector<std::string>& args)
 {
+  do_until(cmd, false, args);
+}
+
+void sim_t::interactive_untilnot(const std::string& cmd, const std::vector<std::string>& args)
+{
+  do_until("until", true, args);
+}
+
+void sim_t::do_until(const std::string& cmd, bool invert, const std::vector<std::string>& args)
+{
   // Format of a valid until command:
   // until CMD [T] [PROC#] ARGS... VAL
   // ARGS can be empty, but CMD and VAL cannot
   // If args[1] is "t", we use tag value
   // If [PROC#] is not present, we use 0
-
-  bool cmd_until = cmd == "until";
+  bool cmd_until = (cmd == "until");
 
   if(args.size() < 2)
     return;
 
   // Check CMD for validity.
-  auto func_t = args[0] == "reg" ? &sim_t::get_reg :
-                args[0] == "pc"  ? &sim_t::get_pc  :
-                args[0] == "m"   ? &sim_t::get_mem :
-                NULL; 
+  // returns tagged_reg_t
+  auto func_tr =  args[0] == "reg"  ? &sim_t::get_reg :
+                  args[0] == "pc"   ? &sim_t::get_pc  :
+                  args[0] == "m"    ? &sim_t::get_mem :
+                  NULL;
 
-  if (func_t == NULL)
-    return;
+  // returns std::string
+  auto func_s =   args[0] == "insn" ? &sim_t::get_insn_name :
+                  NULL;
 
   // Should we use tag or value?
   bool use_tag = (args[1] == "t");
+
+
+  // If CMD not found, return. If CMD returns string, no tags allowed.
+  if ((func_tr == NULL && func_s == NULL) || (func_s && use_tag))
+    return;
 
   size_t p = 0, proc_arg = use_tag ? 2 : 1;
   bool proc_found = false;
@@ -968,96 +1020,48 @@ void sim_t::interactive_until(const std::string& cmd, const std::vector<std::str
     args.end()-1);
 
   // The last argument (only one, sadly) can an expression here.
+  // Note: need separate values for reg_t & std::string.
   reg_t val = parse_expr(procs[p], args.back());
+  std::string val_str = args.back();
 
   ctrlc_pressed = false;
-
+  set_procs_debug(true);
+  set_procs_noisy(false);
   // Step loop.
-  if (func_t != NULL) {
-    while (1) {
+  while (1) {
       try {
-        tagged_reg_t current = (this->*func_t)(args2);
+        if (func_tr) {
+          tagged_reg_t current = (this->*func_tr)(args2);
 
-        // Check tag or value, break if they match.
-        if (cmd_until == (!use_tag) ? (current.val == val) : 
-            (current.tag == val))
-          break;
+          // Check tag or value, break if they match (or don't).
+          if (invert) {
+            if (cmd_until == ((!use_tag) ? (current.val != val) :
+              (current.tag != val)))
+              break;
+          } else {
+            if (cmd_until == ((!use_tag) ? (current.val == val) :
+              (current.tag == val)))
+              break;
+          }
+        } else if (func_s) {
+          std::string current = (this->*func_s)(args2);
+
+          // Break if values (no tags allowed) match (or don't match).
+          if (invert) {
+            if (cmd_until == (current != val_str))
+              break;
+          } else {
+            if (cmd_until == (current == val_str))
+              break;
+          }
+        }
+
         if (ctrlc_pressed)
           break;
       }
       catch (trap_t t) {}
 
-      set_procs_debug(false);
       step(1);
-    }
   }
-}
-
-void sim_t::interactive_untilnot(const std::string& cmd, const std::vector<std::string>& args)
-{
-  // Format of a valid untilnot command:
-  // untilnot CMD [T] [PROC#] ARGS... VAL
-  // ARGS can be empty, but CMD and VAL cannot
-  // If args[1] is "t", we use tag value
-  // If [PROC#] is not present, we use 0
-
-  bool cmd_untilnot = cmd == "untilnot";
-
-  if(args.size() < 2)
-    return;
-
-  // Check CMD for validity.
-  auto func_t = args[0] == "reg" ? &sim_t::get_reg :
-                args[0] == "pc"  ? &sim_t::get_pc  :
-                args[0] == "m"   ? &sim_t::get_mem :
-                NULL; 
-
-  if (func_t == NULL)
-    return;
-
-  // Should we use tag or value?
-  bool use_tag = (args[1] == "t");
-
-  size_t p = 0, proc_arg = use_tag ? 2 : 1;
-  bool proc_found = false;
-
-  // If we can check the argument, and the first character is a digit,
-  // use it as the processor number.
-  if (args.size() > proc_arg && isdigit(args[proc_arg][0])) {
-    p = strtoul(args[proc_arg].c_str(), NULL, 10);
-    if (p >= num_cores())
-      throw trap_illegal_instruction();
-    proc_found = true;
-  }
-
-  // Calculate the index of the start of ARGS passed to CMD.
-  size_t start_args2 = 1 + use_tag + proc_found;
-  std::vector<std::string> args2;
-  args2 = std::vector<std::string>(args.begin() + start_args2,
-    args.end()-1);
-
-  // The last argument (only one, sadly) can an expression here.
-  reg_t val = parse_expr(procs[p], args.back());
-
-  ctrlc_pressed = false;
-
-  // Step loop.
-  if (func_t != NULL) {
-    while (1) {
-      try {
-        tagged_reg_t current = (this->*func_t)(args2);
-
-        // Check tag or value, break if they DON'T match.
-        if (cmd_untilnot == (!use_tag) ? (current.val != val) : 
-            (current.tag != val))
-          break;
-        if (ctrlc_pressed)
-          break;
-      }
-      catch (trap_t t) {}
-
-      set_procs_debug(false);
-      step(1);
-    }
-  }
+  set_procs_debug(false);
 }
