@@ -973,10 +973,10 @@ void sim_t::interactive_untilnot(const std::string& cmd, const std::vector<std::
 void sim_t::do_until(const std::string& cmd, bool invert, const std::vector<std::string>& args)
 {
   // Format of a valid until command:
-  // until CMD [T] [PROC#] ARGS... VAL
+  // until[not] CMD [T] ARGS... VAL
   // ARGS can be empty, but CMD and VAL cannot
   // If args[1] is "t", we use tag value
-  // If [PROC#] is not present, we use 0
+  // proc is assumed to be 0
   bool cmd_until = (cmd == "until");
 
   if(args.size() < 2)
@@ -996,25 +996,15 @@ void sim_t::do_until(const std::string& cmd, bool invert, const std::vector<std:
   // Should we use tag or value?
   bool use_tag = (args[1] == "t");
 
-
   // If CMD not found, return. If CMD returns string, no tags allowed.
   if ((func_tr == NULL && func_s == NULL) || (func_s && use_tag))
     return;
 
-  size_t p = 0, proc_arg = use_tag ? 2 : 1;
-  bool proc_found = false;
-
-  // If we can check the argument, and the first character is a digit,
-  // use it as the processor number.
-  if (args.size() > proc_arg && isdigit(args[proc_arg][0])) {
-    p = strtoul(args[proc_arg].c_str(), NULL, 10);
-    if (p >= num_cores())
-      throw trap_illegal_instruction();
-    proc_found = true;
-  }
+  // Assume proc is 0.
+  size_t p = 0;
 
   // Calculate the index of the start of ARGS passed to CMD.
-  size_t start_args2 = 1 + use_tag + proc_found;
+  size_t start_args2 = 1 + use_tag;
   std::vector<std::string> args2;
   args2 = std::vector<std::string>(args.begin() + start_args2,
     args.end()-1);
