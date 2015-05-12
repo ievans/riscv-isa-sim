@@ -119,7 +119,7 @@ private:
   tagged_reg_t* get_dump_tagged(const std::vector<std::string>& args);
   tagged_reg_t get_pc(const std::vector<std::string>& args);
   reg_t get_tohost(const std::vector<std::string>& args);
-  void do_watch(size_t proc, reg_t addr);
+  void do_watch(processor_t* proc, reg_t addr);
   void do_until(const std::string& cmd, bool invert, const std::vector<std::string>& args);
   reg_t get_when(size_t proc, size_t numToGet);
 
