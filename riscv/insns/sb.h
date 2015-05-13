@@ -2,7 +2,8 @@ reg_t tag = TAG_S2;
 reg_t addr = RS1 + insn.s_imm();
 
 #ifdef TAG_POLICY_NO_PARTIAL_COPY
-tag = TAG_DATA;
+if(!DATA_ENFORCE_OFF)
+  tag = TAG_DATA;
 
 if((TAG_S1 & TAG_DATA) && !(addr & 0x8000000000000000L)) {
     printf("byte store trap at addr %016" PRIx64 ", pc %08lx: \n", addr, npc-4);

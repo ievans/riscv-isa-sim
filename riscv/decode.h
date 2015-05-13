@@ -135,6 +135,7 @@ private:
 #define WRITE_REG(reg, value, tag) STATE.XPR.write(reg, value, tag)
 #define WRITE_REG_TAG(reg, tag) STATE.XPR.write_tag(reg, tag) 
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
+#define DATA_ENFORCE_OFF (STATE.tag_mode == 4)
 #define RETURN_REGISTER 1
 
 #include <tagpolicy.h>
