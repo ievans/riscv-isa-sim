@@ -11,6 +11,7 @@ if ((1 || TAG_ENFORCE_ON) &&
 }
 if(TAG_S1 & TAG_DATA) {
     printf("jumping to data at pc %08lx: \n", npc-4);
+    MMU.monitor();
 }
 set_pc((RS1 + insn.i_imm()) & ~reg_t(1));
 WRITE_RD_AND_TAG(tmp, TAG_PC);

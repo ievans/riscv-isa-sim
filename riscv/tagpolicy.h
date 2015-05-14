@@ -69,7 +69,7 @@ void print_tag_policy() {
   #define TAG_ADD(tag1, tag2) TAG_MAX(tag1, tag2)
   #define TAG_SUB(tag1, tag2) TAG_MAX(tag1, tag2)
   #define TAG_ARITH(tag1, tag2) TAG_MIN(tag1, tag2)
-  #define TAG_LOGIC(tag1, tag2) TAG_MIN(tag1, tag2)
+  #define TAG_LOGIC(tag1, tag2) TAG_MAX(tag1, tag2)
 #else
   #define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
   #define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
