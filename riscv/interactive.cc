@@ -89,6 +89,7 @@ void sim_t::interactive()
     funcs["str"] = &sim_t::interactive_str;
     funcs["tmem"] = &sim_t::interactive_track_mem;
     funcs["treg"] = &sim_t::interactive_track_reg;
+    funcs["debug"] = &sim_t::interactive_debug;
     funcs["until"] = &sim_t::interactive_until;
     funcs["untilnot"] = &sim_t::interactive_untilnot;
     funcs["watch"] = &sim_t::interactive_watch;
@@ -294,6 +295,12 @@ void sim_t::interactive_track_reg(const std::string& cmd, const std::vector<std:
 
   mmu_t *mmu = procs[0]->get_mmu();
   mmu->track_reg(r);
+}
+
+void sim_t::interactive_debug(const std::string& cmd, const std::vector<std::string>& args)
+{
+  processor_t *proc = procs[0];
+  proc->mmu->enable_debug();
 }
 
 void sim_t::interactive_until(const std::string& cmd, const std::vector<std::string>& args)

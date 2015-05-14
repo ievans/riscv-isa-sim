@@ -7,6 +7,7 @@
 #include "processor.h"
 #include "decode.h"
 #include <assert.h>
+#include <vector>
 
 #define REG_SP 2
 #define MAX_ADDR_DEPTH 0
@@ -179,10 +180,18 @@ void tracker_t::monitor() {
 
 void tracker_t::cleanup(node_t *node) {
   if(node == NULL) return;
-  node->refc--;
-  if(node->refc == 0) {
-    cleanup(node->c1);
-    cleanup(node->c2);
-    free(node);
+  std::vector<node_t*> queue = std::vector<node_t*>();
+  queue.push_back(node);
+
+  while(!queue.empty()) {
+    node = queue.back();
+    queue.pop_back();
+    if(node == NULL) continue;
+    node->refc--;
+    if(node->refc == 0) {
+      queue.push_back(node->c1);
+      queue.push_back(node->c2);
+      free(node);
+    }
   }
 }

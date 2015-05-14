@@ -230,6 +230,13 @@ public:
     uint64_t arg0 = libspike_page.args.arg0;
     track_addr(arg0);
   }
+  void enable_debug() {
+    if(proc == NULL || proc->tracker == NULL) {
+      fprintf(stderr, "track_addr: missing -k option in spike\n");
+      return;
+    }
+    proc->tracker->set_debug(true);
+  }
 
 private:
   char* mem;
