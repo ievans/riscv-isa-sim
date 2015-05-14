@@ -19,15 +19,16 @@ int main(void)
   usage();
 
   // get the pointer
-  uint64_t *memoryaddr = mmap(MAPFIXED_ADDR, sizeof(uint64_t *), PROT_WRITE | PROT_EXEC, 
+  uint64_t *memoryaddr = mmap(MAPFIXED_ADDR, sizeof(uint64_t), PROT_READ | PROT_WRITE, 
     MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   *memoryaddr = 16;
-  
+
   uint32_t abc;
 
   printf("original pointer: %p\n", memoryaddr);
   printf("original contents: %" PRIu64 "\n", *memoryaddr);
 
+  // shut up gcc
   abc = (uint32_t) (uintptr_t) memoryaddr;
   printf("after store in 32-bit type: %" PRIx32 "\n", abc);
 
@@ -40,7 +41,6 @@ int main(void)
   printf("recovered pointer: %p\n", memoryaddr);
   printf("recovered contents: %" PRIu64 "\n", *memoryaddr);
 
-  munmap(memoryaddr, sizeof(uint64_t *));
+  munmap(memoryaddr, sizeof(uint64_t));
   return 0;
 }
-

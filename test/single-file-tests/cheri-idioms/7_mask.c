@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 void usage(void)
 {
@@ -11,15 +12,22 @@ void tester(void)
   printf("a test function was called\n");
 }
 
+typedef void (*fptr)(void);
+
 int main(void)
 {
   usage();
 
-  // make the fptr and increment it (use lowest bit)
-  void (*fp)(void) = &tester;
-  fp++;
+  // make the fptr and use lowest bit
+  fptr fp = &tester;
+  uint8_t data = 1;
+  fp = (fptr) ((uint64_t) fp | (data & 1));
 
   // try to call it
+  (fp)();
+
+  fp = &tester;
+  fp++;
   (fp)();
 
   // if we get here, then we have not crashed
