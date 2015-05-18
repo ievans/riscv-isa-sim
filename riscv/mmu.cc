@@ -35,6 +35,7 @@ void mmu_t::init_libspike() {
   libspike_funcs.push_back(&mmu_t::update_cachestats);
   libspike_funcs.push_back(&mmu_t::monitor);
   libspike_funcs.push_back(&mmu_t::track);
+  libspike_funcs.push_back(&mmu_t::exit_with_retcode);
 }
 
 void mmu_t::reset_caches() {
@@ -44,7 +45,6 @@ void mmu_t::reset_caches() {
 void mmu_t::update_cachestats() {
   tracer.update_stats(&libspike_page.cache_info);
 }
-
 
 void* mmu_t::refill_tlb(reg_t addr, reg_t bytes, bool store, bool fetch)
 {

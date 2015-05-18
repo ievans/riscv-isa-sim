@@ -11,9 +11,11 @@
 #include "memtracer.h"
 #include "libspike.h"
 #include "watchloc.h"
-#include <vector>
+#include <cassert>
+#include <climits>
+#include <cstdlib>
 #include <iostream>
-#include <assert.h>
+#include <vector>
 
 // virtual memory configuration
 typedef reg_t pte_t;
@@ -208,9 +210,23 @@ public:
   void print_memtracer();
   void reset_memtracer();
 
+  // Functions for libspike.
   void monitor() {
     if(proc) proc->monitor();
   }
+
+  void exit_with_retcode() {
+    int retcode = -1;
+    uint64_t arg = libspike_page.args.arg0;
+    if (arg > INT_MAX) {
+      fprintf(stderr,
+        "exit_spike_with_retcode() called with invalid int: using -1\n");
+    } else {
+      retcode = arg;
+    }
+    exit(retcode);
+  }
+
   void track_addr(reg_t addr) {
     if(proc == NULL || proc->tracker == NULL) {
       fprintf(stderr, "track_addr: missing -k option in spike\n");

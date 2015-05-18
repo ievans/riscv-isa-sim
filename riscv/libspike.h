@@ -19,6 +19,7 @@ ADD_FN(libspike_reset)
 ADD_FN(libspike_cachestats)
 ADD_FN(libspike_monitor)
 ADD_FN(libspike_track)
+ADD_FN(libspike_exit_with_retcode)
 
 typedef struct {
   float miss_rates[16];
