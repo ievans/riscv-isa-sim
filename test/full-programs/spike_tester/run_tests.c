@@ -3,11 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "libspike.h"
 
 #define MAX_FILEPATH_LEN 64
+#define EXPECT_RETURN_0 0
+#define EXPECT_SIGBUS 1
+#define EXPECT_SIGBUS_PREFIX "trap"
 #define EXIT_TEST_FAILED 1
 #define EXIT_TEST_SUCCEED 0
 #define EXIT_ERROR_PARENT -1
@@ -52,6 +56,14 @@ int main(int argc, char *argv[])
       continue;
     }
 
+    // Control testing mode.
+    int testmode = EXPECT_RETURN_0;
+    size_t prefix_len = sizeof(EXPECT_SIGBUS_PREFIX);
+    if (strlen(dent->d_name) >= prefix_len && strncmp(dent->d_name,
+      EXPECT_SIGBUS_PREFIX, prefix_len) == 0) {
+      testmode = EXPECT_SIGBUS;
+    }
+
     // Try to execute this entry; use exec failure as indication
     // that file is not executable.
     pid_t pid = fork();
@@ -81,17 +93,22 @@ int main(int argc, char *argv[])
       } else if (WIFEXITED(retcode)) {
         if (WEXITSTATUS(retcode) != 0) {
           // Test returned non-zero exit code, count as test failure.
-            fprintf(stderr, "Test %lu failed, returned %d\n",
-              testno, WEXITSTATUS(retcode));
+          fprintf(stderr, "Test %lu failed, returned %d\n",
+            testno, WEXITSTATUS(retcode));
         } else {
-          //fprintf(stderr, "Test %lu succeeded\n", testno);
+          fprintf(stderr, "Test %lu got expected return 0\n", testno);
           tests_passed++;
         }
       } else if (WIFSIGNALED(retcode)) {
         // Test was killed by signal (if program did something illegal),
-        // count this as test failure.
-        fprintf(stderr, "Test %lu failed, killed by signal %d\n",
-          testno, WTERMSIG(retcode));
+        // count this as test failure if we're not expecting it.
+        if (testmode == EXPECT_SIGBUS && WTERMSIG(retcode) == SIGBUS) {
+          fprintf(stderr, "Test %lu got expected sigbus\n", testno);
+          tests_passed++;
+        } else {
+          fprintf(stderr, "Test %lu failed, killed by signal %d\n",
+            testno, WTERMSIG(retcode));
+        }
       }
         break;
     }
