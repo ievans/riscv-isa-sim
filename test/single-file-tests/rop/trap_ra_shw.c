@@ -7,8 +7,7 @@
 int main();
 
 void fake_syscall() {
-	printf("evil stuff!\n");
-	exit(0);
+	abort();
 }
 
 void c() {}
