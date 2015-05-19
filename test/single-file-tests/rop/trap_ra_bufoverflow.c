@@ -11,8 +11,6 @@
 // Note: on gcc you may need to use the -fno-stack-protector flag
 // for this test to actually work.
 
-#define BADSTR  "to win the game you must kill me, john romero.\n"
-
 uint64_t globalBuf[4];
 jmp_buf jmpb;
 
@@ -25,7 +23,7 @@ void usage(void)
 
 void evilFunc(void)
 {
-  printf(BADSTR);
+  abort();
 }
 
 void test(void)
