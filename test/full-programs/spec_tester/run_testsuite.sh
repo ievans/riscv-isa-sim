@@ -16,7 +16,6 @@ SPIKE=$3
 
 echo "Starting compilation..."
 if [ ! -x runner ] ; then
-  rm --preserve-root runner 2> /dev/null
   riscv64-unknown-linux-gnu-gcc run_spec_tests.c -o runner
 fi
 echo "Compilation complete."
