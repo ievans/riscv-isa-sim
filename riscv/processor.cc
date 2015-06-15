@@ -78,7 +78,7 @@ void state_t::reset()
   compare = 0;
   fflags = 0;
   frm = 0;
-  tag_mode = 0;
+  tag_mode = 1;
 
   load_reservation = -1;
 }
