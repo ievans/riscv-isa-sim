@@ -1,0 +1,41 @@
+SPEC tester:
+A tester for SPEC2006 programs that must be run inside a spike variant.
+Requires SPEC2006 programs to be compiled and resident
+in their run directories, along with a runner script.
+
+The proper folder scheme looks like:
+run/
+  400/
+    run_base_test_gcc43-64bit.0000/
+      executable
+      ...
+      run_test.sh
+  401/
+    run_base_test_gcc43-64bit.0000/
+      ...
+  ...
+
+The runner script (run_test.sh) is the output of
+'specinvoke -n' run in each run directory.
+To obtain the run_test.sh for 400 (for example),
+after having sourced the SPEC shrc, run
+
+specinvoke -n > run_test.sh
+chmod +x run_test.sh
+
+and then add the following two lines to the top of run_test.sh:
+
+#!/bin/bash
+cd $(dirname $0)
+
+This tester works by telling the particular spike variant to run
+a (provided in run_spec_tests.c) C testing program that runs
+compiled C binaries on startup, and quits spike when it is done.
+The TIMEOUT for these tests is at the top of run_spec_tests.py.
+
+To use, copy testrunner_setup_disk.sh (and inittab_nosh)
+to the linux directory.
+Then, run ./run_testsuite.sh <test folder path> <path to linux folder>
+<name of spike variant on PATH>.
+
+June 2015
