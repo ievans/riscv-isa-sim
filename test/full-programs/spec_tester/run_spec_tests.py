@@ -61,7 +61,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', default=DEFAULT_INPUT,
         help='path to the test BINARIES')
-    parser.add_argument('--sd', help='path to testrunner_setup_disk.sh', required=True)
+    parser.add_argument('--sd', help='path to setup_disk.sh', required=True)
     parser.add_argument('--vml', help='path to vmlinux', required=True)
     parser.add_argument('--spike', help='spike executable name', required= True)
     args = parser.parse_args()
@@ -87,7 +87,7 @@ def main():
 
         # redirect stdout of setup_disk.sh to /dev/null
         with open(os.devnull, "w") as fnull:
-            invocation = setupdisk_path + " " + run_path + " " + folder_path + " " + path_to_tester + " " + TESTNAME
+            invocation = setupdisk_path + " " + run_path + " -d " + folder_path + " -x " + path_to_tester + " -xarg " + TESTNAME + " -nosudo"
             retcode = subprocess.call(invocation, shell=True, stdout=fnull)
             print "Made disk for:", folder
         if retcode != 0:

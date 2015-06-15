@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # stop if any command returns nonzero
 set -e
 
@@ -101,6 +103,11 @@ then
   cp -v $LINUX_ROOT/bash-4.3.30/bash bin/
 fi
 
+if [[ "$EXE_PATH" != "" ]]; then
+  # use inittab_nosh
+  cp -v $LINUX_ROOT/inittab_nosh etc/inittab
+fi
+
 ln -s /bin/busybox sbin/init
 
 RISCV_BIN="$(which riscv64-unknown-linux-gnu-gcc)"
@@ -123,13 +130,13 @@ if [[ "$EXE_PATH" != "" ]]; then
     fi
     # chop off the directory path as a prefix
     DIRECTORY_PATH=${DIRECTORY_PATH%/}
-    EXE_PATH=${EXE_PATH#$DIRECTORY_PATH/}
+    EXE_PATH=$(basename $DIRECTORY_PATH)/${EXE_PATH#$DIRECTORY_PATH/}
 
     cp -v $LINUX_ROOT/inittab_autoshutdown etc/
     if [[ "$EXE_ARG" != "" ]]; then
-        echo "::sysinit:/riscv_tests/$EXE_PATH /riscv_tests/$(dirname $EXE_PATH)/$EXE_ARG" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+        echo "::sysinit:/riscv_tests/$EXE_PATH /riscv_tests/$(dirname $EXE_PATH)/$EXE_ARG" | cat etc/inittab - > /tmp/out && mv /tmp/out etc/inittab
     else
-        echo "::sysinit:/riscv_tests/$EXE_PATH" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+        echo "::sysinit:/riscv_tests/$EXE_PATH" | cat etc/inittab - > /tmp/out && mv /tmp/out etc/inittab
     fi
     echo "changed inittab, now:"
     cat etc/inittab

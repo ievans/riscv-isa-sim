@@ -33,9 +33,7 @@ a (provided in run_spec_tests.c) C testing program that runs
 compiled C binaries on startup, and quits spike when it is done.
 The TIMEOUT for these tests is at the top of run_spec_tests.py.
 
-To use, copy testrunner_setup_disk.sh (and inittab_nosh)
-to the linux directory.
-Then, run ./run_testsuite.sh <test folder path> <path to linux folder>
+To use, run ./run_testsuite.sh <test folder path> <path to linux folder>
 <name of spike variant on PATH>.
 
 June 2015

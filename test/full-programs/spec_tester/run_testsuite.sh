@@ -4,13 +4,13 @@
 set -e
 
 if [ $# -ne 3 ] ; then
-  echo "usage: run_testsuite.sh <path to test folder sources> <path to linux folder holding testrunner_setup_disk.sh and vmlinux> <spike variant name>"
+  echo "usage: run_testsuite.sh <path to test folder sources> <path to linux folder holding setup_disk.sh and vmlinux> <spike variant name>"
   exit 0
 fi
 
 RUN_DIRS=$1
 LINUX_ROOT=$2
-SETUP_DISK=$LINUX_ROOT/testrunner_setup_disk.sh
+SETUP_DISK=$LINUX_ROOT/setup_disk.sh
 VMLINUX=$LINUX_ROOT/vmlinux
 SPIKE=$3
 
