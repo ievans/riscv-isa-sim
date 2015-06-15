@@ -2,13 +2,14 @@
 set -e
 
 function usage {
-    echo "usage: setup_disk.sh <output disk image name> [-nosudo] [-d directory to copy into root of image] [-x path to executable to run on init] "
+    echo "usage: setup_disk.sh <output disk image name> [-nosudo] [-d directory to copy into root of image] [-x path to executable to run on init] [-xarg argument to executable as a relative path]"
     exit 0
 }
 
 DISK_IMAGE_NAME=""
 DIRECTORY_PATH=""
 EXE_PATH=""
+EXE_ARG=""
 USE_SUDO=1
 
 # stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
@@ -23,6 +24,10 @@ do
         ;;
         -x)
             EXE_PATH="$2"
+            shift # past argument
+        ;;
+        -xarg)
+            EXE_ARG="$2"
             shift # past argument
         ;;
         -nosudo)
@@ -101,7 +106,7 @@ ln -s /bin/busybox sbin/init
 RISCV_BIN="$(which riscv64-unknown-linux-gnu-gcc)"
 RISCV_BIN="$(dirname $RISCV_BIN)"
 cp -a $RISCV_BIN/../sysroot64/lib/. lib/
-if [ "$DIRECTORY_PATH" != "" ]; then
+if [[ "$DIRECTORY_PATH" != "" ]]; then
     echo "Copying provided files in $DIRECTORY_PATH to this directory"
     if [[ "$DIRECTORY_PATH" = /* ]]; then
         cp -rv $DIRECTORY_PATH ../mnt/riscv_tests/
@@ -110,10 +115,22 @@ if [ "$DIRECTORY_PATH" != "" ]; then
     fi
 fi
 
-if [ "$EXE_PATH" != "" ]; then
+if [[ "$EXE_PATH" != "" ]]; then
     # write a custom inittab
+    if [[ "$DIRECTORY_PATH" == "" ]]; then
+        echo "executable provided for inittab but directory is missing"
+        usage
+    fi
+    # chop off the directory path as a prefix
+    DIRECTORY_PATH=${DIRECTORY_PATH%/}
+    EXE_PATH=${EXE_PATH#$DIRECTORY_PATH/}
+
     cp -v $LINUX_ROOT/inittab_autoshutdown etc/
-    echo "::sysinit:/riscv_tests/$(basename $EXE_PATH)" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+    if [[ "$EXE_ARG" != "" ]]; then
+        echo "::sysinit:/riscv_tests/$EXE_PATH /riscv_tests/$(dirname $EXE_PATH)/$EXE_ARG" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+    else
+        echo "::sysinit:/riscv_tests/$EXE_PATH" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+    fi
     echo "changed inittab, now:"
     cat etc/inittab
 fi
