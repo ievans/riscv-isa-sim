@@ -4,11 +4,11 @@
 set -e
 
 function usage {
-    echo "usage: setup_disk.sh <output disk image name> [-nosudo] [-d directory to copy into root of image] [-x path to executable to run on init] [-xarg argument to executable as a relative path]"
+    echo "usage: setup_disk.sh <output disk image path> [-nosudo] [-d directory to copy into root of image] [-x path to executable to run on init] [-xarg argument to executable as a relative path]"
     exit 0
 }
 
-DISK_IMAGE_NAME=""
+DISK_IMAGE_PATH=""
 DIRECTORY_PATH=""
 EXE_PATH=""
 EXE_ARG=""
@@ -36,8 +36,8 @@ do
             USE_SUDO=0
         ;;
         *)
-            if [[ "$DISK_IMAGE_NAME" == "" ]] ; then
-                DISK_IMAGE_NAME=$1
+            if [[ "$DISK_IMAGE_PATH" == "" ]] ; then
+                DISK_IMAGE_PATH=$1
             else
                 echo "setup_disk.sh: too many arguments"
                 usage
@@ -47,7 +47,7 @@ do
     shift # past argument or value
 done
 
-if [[ "$DISK_IMAGE_NAME" == "" ]] ; then
+if [[ "$DISK_IMAGE_PATH" == "" ]] ; then
     echo "setup_disk.sh: missing output disk image name"
     usage
 fi
@@ -152,8 +152,8 @@ fi
 
 rm -rf --preserve-root mnt/
 echo "Configuration complete"
-echo "Copying "$tmpdir"/root.bin to "$DISK_IMAGE_NAME""
+echo "Copying "$tmpdir"/root.bin to "$DISK_IMAGE_PATH""
 cd $LINUX_ROOT
-cp -v $tmpdir/root.bin $DISK_IMAGE_NAME
+cp -v $tmpdir/root.bin $DISK_IMAGE_PATH
 rm -rf --preserve-root $tmpdir
-echo "Run spike +disk="$DISK_IMAGE_NAME"/root.bin vmlinux"
+echo "Run spike +disk="$DISK_IMAGE_PATH"/root.bin vmlinux"
