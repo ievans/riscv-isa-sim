@@ -4,7 +4,7 @@ reg_t addr = RS1 + insn.i_imm();
 // Kernel can do what it wants
 if((TAG_S1 & TAG_DATA) && !(addr & 0x8000000000000000L)) {
     printf("byte load trap at pc %08lx: \n", npc-4);
-    MMU.monitor();
+    throw trap_tag_violation();
 }
 #endif
 

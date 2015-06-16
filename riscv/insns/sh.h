@@ -7,7 +7,7 @@ if(!DATA_ENFORCE_OFF)
 
 if((TAG_S1 & TAG_DATA) && !(addr & 0x8000000000000000L)) {
     printf("halfword store trap at addr %016" PRIx64 ", pc %08lx: \n", addr, npc-4);
-    MMU.monitor();
+    throw trap_tag_violation();
 }
 #endif
 
