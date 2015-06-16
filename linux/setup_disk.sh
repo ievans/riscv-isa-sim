@@ -68,7 +68,7 @@ echo "Creating disk image: root.bin in temporary dir: $tmpdir"
 rm -f --preserve-root root.bin
 
 if [[ "$USE_SUDO" -eq 1 ]] ; then
-    dd if=/dev/zero of=root.bin bs=1M count=64
+    dd if=/dev/zero of=root.bin bs=3M count=64
     sudo mkfs.ext2 -F root.bin
 
     echo "Mounting disk image"

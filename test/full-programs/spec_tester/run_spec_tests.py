@@ -88,7 +88,7 @@ def main():
         # redirect stdout of setup_disk.sh to /dev/null
         with open(os.devnull, "w") as fnull:
             invocation = setupdisk_path + " " + run_path + " -d " + folder_path + " -x " + path_to_tester + " -xarg " + TESTNAME + " -nosudo"
-            retcode = subprocess.call(invocation, shell=True, stdout=fnull)
+            retcode = subprocess.call(invocation, shell=True, stdout=fnull, stderr=fnull)
             print "Made disk for:", folder
         if retcode != 0:
             raise Exception("setup_disk.sh failed with code: {}".format(retcode))
