@@ -54,7 +54,7 @@ void print_tag_policy() {
 }
 */
 
-#define CLEAR_PC_TAG(tag) 0
+#define CLEAR_PC_TAG(tag) ((tag) & ~TAG_PC)
 
 #ifdef TAG_POLICY_NO_RETURN_COPY
 #define CLEAR_TAG(reg, tag) WRITE_REG_TAG(reg, CLEAR_PC_TAG(tag))
@@ -65,6 +65,11 @@ void print_tag_policy() {
   #define TAG_SUB(tag1, tag2) CLEAR_PC_TAG(((tag1) ^ (tag2)))
   #define TAG_ARITH(tag1, tag2) CLEAR_PC_TAG(((tag1) & (tag2)))
   #define TAG_LOGIC(tag1, tag2) CLEAR_PC_TAG(((tag1) & (tag2)))
+#elif defined TAG_POLICY_NO_PARTIAL_COPY
+  #define TAG_ADD(tag1, tag2) TAG_MAX(tag1, tag2)
+  #define TAG_SUB(tag1, tag2) TAG_MAX(tag1, tag2)
+  #define TAG_ARITH(tag1, tag2) TAG_MIN(tag1, tag2)
+  #define TAG_LOGIC(tag1, tag2) TAG_MAX(tag1, tag2)
 #else
   #define TAG_ADD(tag1, tag2) ((tag1) ^ (tag2))
   #define TAG_SUB(tag1, tag2) ((tag1) ^ (tag2))
@@ -77,11 +82,22 @@ void print_tag_policy() {
 #define TAG_ARITH_IMMEDIATE(tag1) (tag1)
 #define TAG_LOGIC_IMMEDIATE(tag1) (tag1)
 
-#define TAG_CSR 0
+#define TAG_DATA 4
 #define TAG_PC 1
+#define TAG_DEFAULT 0
+#define PRIV_MASK TAG_PC
+#define UNPRIV_MASK TAG_DATA
+
+// Maximum privilege combination of two tags
+#define TAG_MAX(tag1, tag2) ((PRIV_MASK & ((tag1) | (tag2))) | (UNPRIV_MASK & ((tag1) & (tag2))))
+// Minimum privilege combination of two tags
+#define TAG_MIN(tag1, tag2) ((PRIV_MASK & ((tag1) & (tag2))) | (UNPRIV_MASK & ((tag1) | (tag2))))
+
+#define TAG_CSR TAG_DEFAULT
 #define TAG_NULL 0
-#define TAG_IMMEDIATE 0
-#define TAG_FLOAT 0
-#define TAG_HTIF 0
+#define TAG_IMMEDIATE TAG_DEFAULT
+#define TAG_FLOAT TAG_DATA
+#define TAG_HTIF TAG_DEFAULT
+
 
 #endif // TAG_POLICY_H
