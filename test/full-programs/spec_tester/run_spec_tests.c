@@ -70,6 +70,9 @@ int main(int argc, char *argv[])
     break;
   }
 
+  // Attempt to sync data in buffers to disk before quitting.
+  sync();
+
   // Quit spike with the appropriate return code.
   libspike_args_t* args = libspike_get_args();
   args->arg0 = exitcode;

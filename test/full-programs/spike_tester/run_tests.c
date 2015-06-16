@@ -119,6 +119,9 @@ int main(int argc, char *argv[])
   closedir(dir);
   fprintf(stderr, "%lu / %lu tests passed\n", tests_passed, testno);
 
+  // Attempt to sync buffers to disk before quitting.
+  sync();
+
   libspike_args_t* args = libspike_get_args();
   if (tests_passed < testno) {
     args->arg0 = EXIT_TEST_FAILED;
