@@ -4,7 +4,7 @@ reg_t addr = RS1 + insn.i_imm();
 #ifdef TAG_POLICY_NO_PARTIAL_COPY
 if((TAG_S1 & TAG_DATA) && !(addr & 0x8000000000000000L)) {
     printf("unsigned word load trap at addr %016" PRIx64 ", pc %08lx: \n", addr, npc-4);
-    throw trap_tag_violation();
+    TAG_TRAP();
 }
 #endif
 
