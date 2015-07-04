@@ -28,6 +28,9 @@ static void help()
   fprintf(stderr, "  -h                 Print this help message\n");
   fprintf(stderr, "  -s                 Track tag statistics\n");
   fprintf(stderr, "  -k                 Turn on dynamic memory tracing\n");
+  fprintf(stderr, "  -p                 Turn on TAG_POLICY_FP\n");
+  fprintf(stderr, "  -c                 Turn on TAG_POLICY_NO_PARTIAL_COPY\n");
+  fprintf(stderr, "  -a                 Turn on TAG_POLICY_NO_FP_ARITH\n");
   fprintf(stderr, "  --ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n");
   fprintf(stderr, "  --dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n");
   fprintf(stderr, "  --l2=<S>:<W>:<B>     B both powers of 2).\n");
@@ -37,10 +40,11 @@ static void help()
   exit(1);
 }
 
+
 int main(int argc, char** argv)
 {
 
-
+  /*
     // todo move this to tagpolicy.h
     printf("tag policies enabled:\n");
     printf("\tTAG_POLICY_MATCH_CALLRET: %s\n",
@@ -67,7 +71,7 @@ int main(int argc, char** argv)
 #else
            "disabled");
 #endif
-
+  */
 
 
 
@@ -78,6 +82,10 @@ int main(int argc, char** argv)
   size_t nprocs = 1;
   size_t mem_mb = 0;
   bool tag_stats = false;
+  bool tag_policy_no_return_copy = true;
+  bool tag_policy_fp = false;
+  bool tag_policy_no_partial_copy = false;
+  bool tag_policy_no_fp_arith = false;
   std::unique_ptr<icache_sim_t> ic;
   std::unique_ptr<dcache_sim_t> dc;
   std::unique_ptr<cache_sim_t> l2;
@@ -95,6 +103,9 @@ int main(int argc, char** argv)
   parser.option('m', 0, 1, [&](const char* s){mem_mb = atoi(s);});
   parser.option('t', 0, 0, [&](const char* s){use_watch_loc = true;});
   parser.option('k', 0, 0, [&](const char* s){use_tracker = true;});
+  parser.option('p', 0, 0, [&](const char* s){tag_policy_fp = true;});  
+  parser.option('c', 0, 0, [&](const char* s){tag_policy_no_partial_copy = true;});
+  parser.option('a', 0, 0, [&](const char* s){tag_policy_no_fp_arith = true;});
   parser.option(0, "ic", 1, [&](const char* s){ic.reset(new icache_sim_t(s));});
   parser.option(0, "dc", 1, [&](const char* s){dc.reset(new dcache_sim_t(s));});
   parser.option(0, "l2", 1, [&](const char* s){l2.reset(cache_sim_t::construct(s, "L2$"));});
@@ -107,6 +118,17 @@ int main(int argc, char** argv)
       exit(-1);
     }
   });
+
+  // declare status of tag policies
+  const char *tag_policy_fp_status = tag_policy_fp ? "enabled" : "disabled";
+  const char *tag_policy_no_partial_copy_status = tag_policy_no_partial_copy ? "enabled" : "disabled";
+  const char *tag_policy_no_fp_arith_status = tag_policy_no_fp_arith ? "enabled" : "disabled";
+  printf("tag policies enabled:\n");                                                                                                          
+  printf("\tTAG_POLICY_MATCH_CALLRET: enabled\n");
+  printf("\tTAG_POLICY_NO_RETURN_COPY: enabled\n");
+  printf("\tTAG_POLICY_FP: %s\n", tag_policy_fp_status);
+  printf("\tTAG_POLICY_NO_PARTIAL_COPY: %s\n", tag_policy_no_partial_copy_status);
+  printf("\tTAG_POLICY_NO_FP_ARITH: %s\n", tag_policy_no_fp_arith_status);
 
   auto argv1 = parser.parse(argv);
   if (!*argv1)
