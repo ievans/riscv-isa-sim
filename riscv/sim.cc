@@ -40,7 +40,7 @@ sim_t::sim_t(size_t nprocs, size_t mem_mb, const std::vector<std::string>& args)
 
   tagsz = memsz / MEM_TO_TAG_RATIO;
   tagmem = (char*) malloc(tagsz);
-  memset(tagmem, 0, tagsz);
+  memset(tagmem, TAG_DEFAULT, tagsz);
 
   debug_mmu = new mmu_t(mem, tagmem, memsz);
 
@@ -148,3 +148,8 @@ void sim_t::set_procs_debug(bool value)
     procs[i]->set_debug(value);
 }
 
+void sim_t::set_procs_noisy(bool value)
+{
+  for (size_t i = 0; i < procs.size(); i++)
+    procs[i]->set_noisy(value);
+}

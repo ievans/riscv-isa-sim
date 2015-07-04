@@ -21,8 +21,7 @@ int a(int arg1) {
 
 	DUMP(&arg1);
 	if(k != 0x0e0d0e0f) {
-		printf("Calling function a() maliciously with argument %08x\n", arg1);
-		exit(0);
+		abort();
 	}
 }
 

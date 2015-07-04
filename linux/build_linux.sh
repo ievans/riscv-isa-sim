@@ -1,3 +1,4 @@
+set -e
 rm -rf --preserve-root linux-3.14.29
 curl https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.14.29.tar.xz | tar -xJ
 cd linux-3.14.29

@@ -123,6 +123,7 @@ private:
 };
 
 // helpful macros, etc
+#define TRAP_DEBUG 1
 #define MMU (*p->get_mmu())
 #define STATE (*p->get_state())
 #define RS1 STATE.XPR[insn.rs1()]
@@ -135,7 +136,14 @@ private:
 #define WRITE_REG(reg, value, tag) STATE.XPR.write(reg, value, tag)
 #define WRITE_REG_TAG(reg, tag) STATE.XPR.write_tag(reg, tag) 
 #define TAG_ENFORCE_ON (STATE.tag_mode == 1)
+#define DATA_ENFORCE_OFF (STATE.tag_mode == 4)
 #define RETURN_REGISTER 1
+
+#if TRAP_DEBUG
+  #define TAG_TRAP() MMU.monitor()
+#else
+  #define TAG_TRAP() throw trap_tag_violation()
+#endif
 
 #include <tagpolicy.h>
 

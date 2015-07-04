@@ -26,8 +26,10 @@ main(int argc, char **argv)
 			printf("bigarray[%d] didn't hold its value!\n", i);
 			exit(2);
 		}
-
+	/*
 	printf("Yes, good.  Now doing a wild write off the end...\n");
 	bigarray[ARRAYSIZE+1024] = 0;
 	printf("SHOULD HAVE TRAPPED!!!\n");
+	*/
+	return 0;
 }

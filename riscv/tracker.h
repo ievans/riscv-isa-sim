@@ -20,7 +20,7 @@ typedef struct node_t {
 class tracker_t {
 public:
   tracker_t(processor_t* _proc, size_t _sz);
-  void track(insn_t insn);
+  void track(insn_t insn, reg_t pc);
   void track_load(uint64_t paddr);
   void track_store(uint64_t paddr, uint64_t addr);
   void print_mem(uint64_t paddr) {
@@ -47,6 +47,7 @@ private:
   node_t **mem;
   node_t **regs;
   insn_t last_insn;
+  reg_t last_pc;
   bool is_mem_insn;
   size_t sz;
 };

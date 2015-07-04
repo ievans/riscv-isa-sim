@@ -26,6 +26,7 @@ public:
   void set_histogram(bool value);
   void set_cache_level(bool value);
   void set_procs_debug(bool value);
+  void set_procs_noisy(bool value);
   htif_isasim_t* get_htif() { return htif.get(); }
   mmu_t* get_debug_mmu() { return debug_mmu; }
 
@@ -97,8 +98,12 @@ private:
   void interactive_cachereset(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_track_mem(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_track_reg(const std::string& cmd, const std::vector<std::string>& args);
-  reg_t get_reg(const std::vector<std::string>& args);
-  tagged_reg_t get_reg_tagged(const std::vector<std::string>& args);
+  void interactive_eval(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_insn(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_debug(const std::string& cmd, const std::vector<std::string>& args);
+  std::string get_insn(const std::vector<std::string>& args);
+  std::string get_insn_name(const std::vector<std::string>& args);
+  tagged_reg_t get_reg(const std::vector<std::string>& args);
   void write_mem(const std::vector<std::string>& args);
   void write_mem_t(const std::vector<std::string>& args);
   void write_reg(const std::vector<std::string>& args);
@@ -111,12 +116,12 @@ private:
   reg_t parse_val(processor_t* proc, const std::string& str);
   reg_t parse_expr(processor_t* proc, const std::string& str);
   std::string arg_join(const std::vector<std::string>& args, size_t start, size_t end = 0);
-  reg_t get_mem(const std::vector<std::string>& args);
-  tagged_reg_t get_mem_tagged(const std::vector<std::string>& args);
+  tagged_reg_t get_mem(const std::vector<std::string>& args);
   tagged_reg_t* get_dump_tagged(const std::vector<std::string>& args);
-  reg_t get_pc(const std::vector<std::string>& args);
+  tagged_reg_t get_pc(const std::vector<std::string>& args);
   reg_t get_tohost(const std::vector<std::string>& args);
-  void do_watch(size_t proc, reg_t addr);
+  void do_watch(processor_t* proc, reg_t addr);
+  void do_until(const std::string& cmd, bool invert, const std::vector<std::string>& args);
   reg_t get_when(size_t proc, size_t numToGet);
 
   friend class htif_isasim_t;

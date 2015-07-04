@@ -1,6 +1,15 @@
 extern bool tag_policy_no_return_copy;
 
 reg_t addr = RS1 + insn.i_imm();
+
+#ifdef TAG_POLICY_NO_PARTIAL_COPY
+// Kernel can do what it wants
+if((TAG_S1 & TAG_DATA) && !(addr & 0x8000000000000000L)) {
+    printf("byte load trap at pc %08lx: \n", npc-4);
+    TAG_TRAP();
+}
+#endif
+
 tagged_reg_t v = MMU.load_tagged_int8(addr);
 if (tag_policy_no_return_copy) {
   //#ifdef TAG_POLICY_NO_RETURN_COPY

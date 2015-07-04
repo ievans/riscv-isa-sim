@@ -1,9 +1,55 @@
+#!/bin/bash
+
 # stop if any command returns nonzero
 set -e
 
-if [[ $# -eq 0 ]] ; then
+function usage {
+    echo "usage: setup_disk.sh <output disk image path> [-nosudo] [-d directory to copy into root of image] [-x path to executable to run on init] [-xarg argument to executable as a relative path]"
+    exit 0
+}
+
+DISK_IMAGE_PATH=""
+DIRECTORY_PATH=""
+EXE_PATH=""
+EXE_ARG=""
+USE_SUDO=1
+
+# stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+while [[ $# > 0 ]]
+do
+    key="$1"
+
+    case $key in
+        -d)
+            DIRECTORY_PATH="$2"
+            shift # past argument
+        ;;
+        -x)
+            EXE_PATH="$2"
+            shift # past argument
+        ;;
+        -xarg)
+            EXE_ARG="$2"
+            shift # past argument
+        ;;
+        -nosudo)
+            USE_SUDO=0
+        ;;
+        *)
+            if [[ "$DISK_IMAGE_PATH" == "" ]] ; then
+                DISK_IMAGE_PATH=$1
+            else
+                echo "setup_disk.sh: too many arguments"
+                usage
+            fi
+        ;;
+    esac
+    shift # past argument or value
+done
+
+if [[ "$DISK_IMAGE_PATH" == "" ]] ; then
     echo "setup_disk.sh: missing output disk image name"
-    echo "usage: setup_disk.sh <output disk image name> [directory to copy into root of image] [path to executable to run on init] "
+    usage
 fi
 
 # if this script is called in parallel, it will need a lot of loop devices
@@ -20,15 +66,31 @@ LINUX_ROOT=$(dirname "$SCRIPT")
 tmpdir=`mktemp -d` && cd $tmpdir
 echo "Creating disk image: root.bin in temporary dir: $tmpdir"
 rm -f --preserve-root root.bin
-dd if=/dev/zero of=root.bin bs=1M count=64
-sudo mkfs.ext2 -F root.bin
 
-echo "Mounting disk image"
+if [[ "$USE_SUDO" -eq 1 ]] ; then
+    dd if=/dev/zero of=root.bin bs=3M count=64
+    sudo mkfs.ext2 -F root.bin
 
-rm -rf --preserve-root mnt/
-mkdir mnt
-sudo mount -o loop root.bin mnt
-sudo chown $USER mnt/
+    echo "Mounting disk image"
+
+    rm -rf --preserve-root mnt/
+    mkdir mnt
+    sudo mount -o loop root.bin mnt
+    sudo chown $USER mnt/
+else
+    if [ ! -f $LINUX_ROOT/blankdisk.bin ]; then
+        echo "blankdisk.bin not found. Run make_blank_disk.sh before using -nosudo."
+        exit 0
+    fi
+    cp $LINUX_ROOT/blankdisk.bin root.bin
+
+    echo "Mounting disk image"
+
+    rm -rf --preserve-root mnt/
+    mkdir mnt
+    fuseext2 -o rw+ root.bin mnt
+fi
+
 cd mnt/
 echo "Initializing disk image"
 mkdir -p bin etc dev lib proc sbin tmp usr usr/bin usr/lib usr/sbin riscv_tests
@@ -41,35 +103,57 @@ then
   cp -v $LINUX_ROOT/bash-4.3.30/bash bin/
 fi
 
+if [[ "$EXE_PATH" != "" ]]; then
+  # use inittab_nosh
+  cp -v $LINUX_ROOT/inittab_nosh etc/inittab
+fi
+
 ln -s /bin/busybox sbin/init
 
 RISCV_BIN="$(which riscv64-unknown-linux-gnu-gcc)"
 RISCV_BIN="$(dirname $RISCV_BIN)"
 cp -a $RISCV_BIN/../sysroot64/lib/. lib/
-if [ "$2" != "" ]; then
-    echo "Copying provided files in $2 to this directory"
-    if [[ "$2" = /* ]]; then
-        cp -rv $2 ../mnt/riscv_tests/
+if [[ "$DIRECTORY_PATH" != "" ]]; then
+    echo "Copying provided files in $DIRECTORY_PATH to this directory"
+    if [[ "$DIRECTORY_PATH" = /* ]]; then
+        cp -rv $DIRECTORY_PATH ../mnt/riscv_tests/
     else
-        cp -rv $LINUX_ROOT/$2 ../mnt/riscv_tests/        
+        cp -rv $LINUX_ROOT/$DIRECTORY_PATH ../mnt/riscv_tests/
     fi
 fi
 
-if [ "$3" != "" ]; then
+if [[ "$EXE_PATH" != "" ]]; then
     # write a custom inittab
+    if [[ "$DIRECTORY_PATH" == "" ]]; then
+        echo "executable provided for inittab but directory is missing"
+        usage
+    fi
+    # chop off the directory path as a prefix
+    DIRECTORY_PATH=${DIRECTORY_PATH%/}
+    EXE_PATH=$(basename $DIRECTORY_PATH)/${EXE_PATH#$DIRECTORY_PATH/}
+
     cp -v $LINUX_ROOT/inittab_autoshutdown etc/
-    echo "::sysinit:/riscv_tests/$(basename $3)" | cat - etc/inittab > /tmp/out && mv /tmp/out etc/inittab
+    if [[ "$EXE_ARG" != "" ]]; then
+        echo "::sysinit:/riscv_tests/$EXE_PATH /riscv_tests/$(dirname $EXE_PATH)/$EXE_ARG" | cat etc/inittab - > /tmp/out && mv /tmp/out etc/inittab
+    else
+        echo "::sysinit:/riscv_tests/$EXE_PATH" | cat etc/inittab - > /tmp/out && mv /tmp/out etc/inittab
+    fi
     echo "changed inittab, now:"
     cat etc/inittab
 fi
 
 cd ..
 echo "Unmounting directory"
-sudo umount mnt
+if [[ "$USE_SUDO" -eq 1 ]] ; then
+    sudo umount mnt
+else
+    fusermount -u mnt
+fi
+
 rm -rf --preserve-root mnt/
 echo "Configuration complete"
-echo "Copying "$tmpdir"/root.bin to "$1""
+echo "Copying "$tmpdir"/root.bin to "$DISK_IMAGE_PATH""
 cd $LINUX_ROOT
-cp -v $tmpdir/root.bin $1
+cp -v $tmpdir/root.bin $DISK_IMAGE_PATH
 rm -rf --preserve-root $tmpdir
-echo "Run spike +disk="$1"/root.bin vmlinux"
+echo "Run spike +disk="$DISK_IMAGE_PATH"/root.bin vmlinux"

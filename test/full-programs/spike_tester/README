@@ -1,0 +1,19 @@
+Spike tester:
+A tester for simple, single-file C programs that
+must be run inside a spike variant.
+Designed to be used with C programs that return nonzero
+or are sent signals to be killed when they fail.
+Works by telling the particular spike variant to run
+a (provided in run_tests.c) C testing progrm that runs
+compiled C binaries on startup, and waiting for termination.
+
+To use, copy testrunner_setup_disk.sh to the linux directory.
+Then, modify "NUM_TESTS" and optionally NUM_PROCS and TIMEOUT
+at the top of compile_tests.py to reflect your build system.
+If you want to compile your tests with optimizations, modify
+the "CC" prompt as well.
+
+Then, run ./run_testsuite.sh <test folder path> <path to linux folder>
+<name of spike variant on PATH>.
+
+May 2015

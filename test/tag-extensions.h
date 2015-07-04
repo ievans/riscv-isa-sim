@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdbool.h>
 
 #define NOT_AVAILABLE "warning: tag enforcement not available for this architecture"
@@ -19,6 +20,13 @@ void tag_enforcement_off() {
 #else
   printf(NOT_AVAILABLE);
 #endif
+}
+
+void execvp_tagged(char* file, char *argv[]) {
+  tag_enforcement_on();
+  execvp(argv[1], &argv[1]);
+  perror("exec failure");
+  exit(1);
 }
 
 void* malloc_tagged(size_t size, bool is_fptr) {

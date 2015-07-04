@@ -74,6 +74,7 @@ public:
 
   void init_tracker();
   void set_debug(bool value);
+  void set_noisy(bool value);
   void set_histogram(bool value);
   void reset(bool value);
   void step(size_t n); // run for n cycles
@@ -106,6 +107,7 @@ private:
   uint32_t id;
   bool run; // !reset
   bool debug;
+  bool noisy;
   bool histogram_enabled;
   bool rv64;
   bool serialized;

@@ -12,7 +12,6 @@
 // for this test to actually work.
 
 #define GOODSTR "you have saved us all.\n"
-#define BADSTR  "to win the game you must kill me, john romero.\n"
 
 void usage(void)
 {
@@ -25,8 +24,7 @@ void usage(void)
 
 int evilFunc(void)
 {
-  printf(BADSTR);
-  return 666;
+  abort();
 }
 
 int goodFunc(void)

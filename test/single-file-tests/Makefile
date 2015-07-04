@@ -5,12 +5,13 @@ SHELL := /bin/bash
 PATH := $(PWD)/env:$(PATH)
 
 CCCLANG = riscv-clang
-CC = export PATH=$(RISCV)/bin:$(PATH) && riscv64-unknown-elf-gcc
+CC = export PATH=$(RISCV)/bin:$(PATH) && riscv64-unknown-linux-gnu-gcc
 NATIVECC = gcc
 
 SOURCES=$(shell find . -type f -iname '*.c')
 OBJECTS=$(foreach x, $(basename $(SOURCES)), $(x).o)
 BINARIES=$(foreach x, $(basename $(SOURCES)), $(x))
+LINUX_BINARIES=$(foreach x, $(basename $(SOURCES)), $(x)-linux)
 
 #TARGET=bin
 
@@ -19,6 +20,11 @@ all: $(BINARIES)
 #$(TARGET) : $(BINARIES)
 #	$(CC) $^ -o $@
 
+linux: $(LINUX_BINARIES)
+
+%-linux: %.c
+	mkdir -p bin/riscv/`dirname $*`
+	$(CC) $(CFLAGS) $^ -o bin/riscv/$*
 
 %: %.c
 	mkdir -p bin/riscv/`dirname $@`

@@ -7,6 +7,7 @@
 #include "processor.h"
 #include "decode.h"
 #include <assert.h>
+#include <vector>
 
 #define REG_SP 2
 #define MAX_ADDR_DEPTH 0
@@ -35,7 +36,7 @@ void tracker_t::track_load(uint64_t paddr) {
 
   node_t* node = (node_t*) malloc(sizeof(node_t));
   node->val = dst;
-  node->pc = proc->state.pc;
+  node->pc = last_pc;
   node->insn = last_insn;
   node->is_mem = 1;
   node->c1 = mem[ind];
@@ -62,7 +63,7 @@ void tracker_t::track_store(uint64_t paddr, uint64_t addr) {
 
   node_t* node = (node_t*) malloc(sizeof(node_t));
   node->val = addr;
-  node->pc = proc->state.pc;
+  node->pc = last_pc;
   node->insn = last_insn;
   node->is_mem = 1;
   node->c1 = regs[reg];
@@ -82,8 +83,9 @@ void tracker_t::track_store(uint64_t paddr, uint64_t addr) {
   }
 }
 
-void tracker_t::track(insn_t insn) {
+void tracker_t::track(insn_t insn, reg_t pc) {
   last_insn = insn;
+  last_pc = pc;
   is_mem_insn = false;
   int *buf = disasm->lookup_args(insn);
   int n = buf[0];
@@ -110,8 +112,8 @@ void tracker_t::track(insn_t insn) {
   if(dst <= 0 || dst != buf[0]) return;
 
   // Check for duplicate pc
-  if((n >= 2 && regs[buf[1]] && regs[buf[1]]->pc == proc->state.pc) ||
-     (n >= 3 && regs[buf[2]] && regs[buf[2]]->pc == proc->state.pc))
+  if((n >= 2 && regs[buf[1]] && regs[buf[1]]->pc == pc) ||
+     (n >= 3 && regs[buf[2]] && regs[buf[2]]->pc == pc))
   {
     return;
   }
@@ -141,7 +143,7 @@ void tracker_t::track(insn_t insn) {
       }
     }
   }
-  node->pc = proc->state.pc;
+  node->pc = pc;
   node->refc = 1;
 
   // Replace the old node for this register
@@ -166,8 +168,7 @@ void tracker_t::print(node_t *node, int depth, int addr_depth) {
   else
     fprintf(stderr, "(insn = %s, addr = 0x%016" PRIx64 ", pc = 0x%016" PRIx64 ")\n", disasm->lookup_name(node->insn), node->val, node->pc);
   print(node->c1, depth+1, addr_depth);
-  // Keep track of number of times we take addr subtrees
-  // Keep track of how many times we take the addr branch from the root
+  // Keep track of number of times we go to addr subtrees
   addr_depth += node->is_mem;
   if(addr_depth <= MAX_ADDR_DEPTH)
     print(node->c2, depth+1, addr_depth);
@@ -179,10 +180,18 @@ void tracker_t::monitor() {
 
 void tracker_t::cleanup(node_t *node) {
   if(node == NULL) return;
-  node->refc--;
-  if(node->refc == 0) {
-    cleanup(node->c1);
-    cleanup(node->c2);
-    free(node);
+  std::vector<node_t*> queue = std::vector<node_t*>();
+  queue.push_back(node);
+
+  while(!queue.empty()) {
+    node = queue.back();
+    queue.pop_back();
+    if(node == NULL) continue;
+    node->refc--;
+    if(node->refc == 0) {
+      queue.push_back(node->c1);
+      queue.push_back(node->c2);
+      free(node);
+    }
   }
 }
