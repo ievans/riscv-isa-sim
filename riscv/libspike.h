@@ -22,8 +22,18 @@ ADD_FN(libspike_track)
 ADD_FN(libspike_exit_with_retcode)
 
 typedef struct {
-  float miss_rates[16];
-  char names[16][32];
+  char name[32];
+  int read_accesses;
+  int read_misses;
+  int bytes_read;
+  int write_accesses;
+  int write_misses;
+  int bytes_written;
+  int writebacks;
+} cache_stats_t;
+
+typedef struct {
+  cache_stats_t stats[16];
   uint32_t n_caches;
 } cache_info_t;
 

@@ -4,6 +4,7 @@
 #define _RISCV_CACHE_SIM_H
 
 #include "memtracer.h"
+#include "libspike.h"
 #include <cstring>
 #include <string>
 #include <map>
@@ -30,9 +31,11 @@ class cache_sim_t
   const char* get_name() { return name.c_str(); }
   void print_stats();
   float get_miss_rate();
+  void write_stats(cache_stats_t *dst);
   void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
   cache_sim_t* get_miss_handler() { return miss_handler; }
   void set_tag_mode(bool mode) { tag_mode = mode; }
+  bool is_tag_cache() { return tag_mode; }
 
   static cache_sim_t* construct(const char* config, const char* name);
 

@@ -44,7 +44,7 @@ void memtracer_list_t::update_stats(cache_info_t* cache_info) {
   cache_info->n_caches = cache_buf.size();
 
   for(uint32_t i = 0; i < cache_buf.size(); i++) {
-    cache_info->miss_rates[i] = cache_buf[i]->get_miss_rate();
-    strncpy(cache_info->names[i], cache_buf[i]->get_name(), 31);
+    cache_stats_t* stats = &cache_info->stats[i];
+    cache_buf[i]->write_stats(stats);
   }
 }

@@ -80,6 +80,17 @@ float cache_sim_t::get_miss_rate() {
   return 100.0f * (read_misses+write_misses)/(read_accesses+write_accesses);
 }
 
+void cache_sim_t::write_stats(cache_stats_t *dst) {
+  strncpy(dst->name, name.c_str(), 31);
+  dst->bytes_read = bytes_read;
+  dst->bytes_written = bytes_written;
+  dst->read_accesses = read_accesses;
+  dst->write_accesses = write_accesses;
+  dst->read_misses = read_misses;
+  dst->write_misses = write_misses;
+  dst->writebacks = writebacks;
+}
+
 void cache_sim_t::print_stats()
 {
   if(read_accesses + write_accesses == 0)
@@ -158,7 +169,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
   if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
   {
     uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
-    if (miss_handler)
+    if (miss_handler && !miss_handler->is_tag_cache())
       miss_handler->access(dirty_addr, linesz, true);
     writebacks++;
   }

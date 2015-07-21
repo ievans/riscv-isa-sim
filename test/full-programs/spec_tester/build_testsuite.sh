@@ -2,7 +2,6 @@
 # Note: assumes that you have already created config file spike.cfg in spec config directory
 
 set -e
-set -v
 
 function usage {
     echo "usage: build_testsuite.sh <spec path>"
@@ -14,8 +13,8 @@ if [[ "$#" -ne 1 ]] ; then
 fi
 
 # delete old run directory and make new one
-rm -rf run/
-mkdir run
+rm -rfv run/
+mkdir -v run
 outpath=$(pwd)/run
 
 cd $1
@@ -41,10 +40,10 @@ for testpath in $(pwd)/* ; do
     output_exename="${exename}_base.gcc43-64bit"
 
     # clean out old outputs
-    rm -rf build/
-    mkdir build
-    rm -rf run/
-    mkdir run
+    rm -rfv build/
+    mkdir -v build
+    rm -rfv run/
+    mkdir -v run
 
     # setup output directories
     runspec --fake --loose --size test --tune base --config spike $number > /dev/null
@@ -70,7 +69,7 @@ for testpath in $(pwd)/* ; do
         rundir="$(basename "${path}")"
     done
     cd $testpath
-    cp "build/${builddir}/${exename}" "run/${rundir}/${output_exename}"
+    cp -v "build/${builddir}/${exename}" "run/${rundir}/${output_exename}"
 
     # create script to run the test
     cd run/$rundir
@@ -80,13 +79,13 @@ for testpath in $(pwd)/* ; do
 
     # copy run directory to the output folder
     cd ..
-    mkdir $outpath/$number
-    cp -r $rundir $outpath/$number/
+    mkdir -v $outpath/$number
+    cp -v -r $rundir $outpath/$number/
 
     # cleanup build files
     cd $testpath
-    rm -rf build/
-    mkdir build
-    rm -rf run/
-    mkdir run
+    rm -rfv build/
+    mkdir -v build
+    rm -rfv run/
+    mkdir -v run
 done
