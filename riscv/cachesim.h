@@ -32,8 +32,12 @@ class cache_sim_t
   void print_stats();
   float get_miss_rate();
   void write_stats(cache_stats_t *dst);
-  void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
-  cache_sim_t* get_miss_handler() { return miss_handler; }
+  size_t get_sets() { return sets; }
+  size_t get_ways() { return ways; }
+  size_t get_linesz() { return linesz; }
+  int get_n_miss_handlers() { return n_miss_handlers; }
+  cache_sim_t* get_miss_handler(int i) { return miss_handlers[i]; }
+  void add_miss_handler(cache_sim_t* mh) { miss_handlers[n_miss_handlers++] = mh; }
   void set_tag_mode(bool mode) { tag_mode = mode; }
   bool is_tag_cache() { return tag_mode; }
 
@@ -50,8 +54,9 @@ class cache_sim_t
 
     memset(tags, 0, sizeof(uint64_t) * sets*ways);
 
-    if(miss_handler)
-      miss_handler->reset();
+    int i;
+    for(i = 0; i < n_miss_handlers; i++)
+      miss_handlers[i]->reset();
   }
 
  protected:
@@ -62,7 +67,9 @@ class cache_sim_t
   virtual uint64_t victimize(uint64_t addr);
 
   lfsr_t lfsr;
-  cache_sim_t* miss_handler;
+
+  cache_sim_t* miss_handlers[16];
+  int n_miss_handlers;
 
   size_t sets;
   size_t ways;
@@ -107,9 +114,9 @@ class cache_memtracer_t : public memtracer_t
   {
     delete cache;
   }
-  void set_miss_handler(cache_sim_t* mh)
+  void add_miss_handler(cache_sim_t* mh)
   {
-    cache->set_miss_handler(mh);
+    cache->add_miss_handler(mh);
   }
   void print_stats() {
     cache->print_stats();

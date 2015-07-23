@@ -10,10 +10,16 @@
 void memtracer_list_t::add_cache(cache_sim_t *cache) {
   std::vector<cache_sim_t*>::iterator it;
   while(cache != NULL) {
+    // Check if we already pushed this cache
     it = find (cache_buf.begin(), cache_buf.end(), cache);
     if(it == cache_buf.end())
       cache_buf.push_back(cache);
-    cache = cache->get_miss_handler();
+
+    // Recurse on the miss handlers
+    int i;
+    for(i = 0; i < cache->get_n_miss_handlers(); i++) {
+      add_cache(cache->get_miss_handler(i));
+    }
   }
 }
 

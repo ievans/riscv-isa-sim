@@ -118,9 +118,20 @@ int main(int argc, char** argv)
     tagtracer.reset(new tag_memtracer_t(s.get_tagmem(), s.get_memsz() / MEM_TO_TAG_RATIO));
   }
 
-  if (l2 && tc) l2->set_miss_handler(&*tc);
-  if (ic && l2) ic->set_miss_handler(&*l2);
-  if (dc && l2) dc->set_miss_handler(&*l2);
+  if (l2 && tc) {
+    size_t sets = tc->get_sets();
+    size_t ways = tc->get_ways();
+    size_t linesz = tc->get_linesz();
+    l2->add_miss_handler(&*tc);
+    for(int i = 0; i < 10; i++) {
+      sets *= 2;
+      cache_sim_t *bigger_tc = new cache_sim_t(sets, ways, linesz, "TC$");
+      bigger_tc->set_tag_mode(true);
+      l2->add_miss_handler(bigger_tc);
+    }
+  }
+  if (ic && l2) ic->add_miss_handler(&*l2);
+  if (dc && l2) dc->add_miss_handler(&*l2);
   if (ic) s.get_debug_mmu()->register_memtracer(&*ic);
   if (dc) s.get_debug_mmu()->register_memtracer(&*dc);
   if (tagtracer) s.get_debug_mmu()->register_memtracer(&*tagtracer);

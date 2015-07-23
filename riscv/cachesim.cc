@@ -57,7 +57,7 @@ void cache_sim_t::init()
   bytes_written = 0;
   writebacks = 0;
 
-  miss_handler = NULL;
+  n_miss_handlers = 0;
 }
 
 cache_sim_t::cache_sim_t(const cache_sim_t& rhs)
@@ -117,9 +117,10 @@ void cache_sim_t::print_stats()
   std::cout << "Miss Rate:             " << mr << '%' << std::endl;
   std::cout << std::endl;
 
-  if(miss_handler) {
+  int i;
+  for(i = 0; i < n_miss_handlers; i++) {
     std::cout << name << " Miss Handler:" << std::endl;
-    miss_handler->print_stats();
+    miss_handlers[i]->print_stats();
   }
 }
 
@@ -165,17 +166,18 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
   store ? write_misses++ : read_misses++;
 
   uint64_t victim = victimize(addr);
+  int i;
 
   if ((victim & (VALID | DIRTY)) == (VALID | DIRTY))
   {
     uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
-    if (miss_handler && !miss_handler->is_tag_cache())
-      miss_handler->access(dirty_addr, linesz, true);
+    for(i = 0; i < n_miss_handlers; i++)
+      miss_handlers[i]->access(dirty_addr, linesz, true);
     writebacks++;
   }
 
-  if (miss_handler)
-    miss_handler->access(addr & ~(linesz-1), linesz, false);
+  for(i = 0; i < n_miss_handlers; i++)
+    miss_handlers[i]->access(addr & ~(linesz-1), linesz, false);
 
   if (store)
     *check_tag(addr) |= DIRTY;
