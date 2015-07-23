@@ -23,13 +23,13 @@ ADD_FN(libspike_exit_with_retcode)
 
 typedef struct {
   char name[32];
-  int read_accesses;
-  int read_misses;
-  int bytes_read;
-  int write_accesses;
-  int write_misses;
-  int bytes_written;
-  int writebacks;
+  uint64_t read_accesses;
+  uint64_t read_misses;
+  uint64_t bytes_read;
+  uint64_t write_accesses;
+  uint64_t write_misses;
+  uint64_t bytes_written;
+  uint64_t writebacks;
 } cache_stats_t;
 
 typedef struct {

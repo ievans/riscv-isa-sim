@@ -15,9 +15,7 @@ VMLINUX=$LINUX_ROOT/vmlinux
 SPIKE=$3
 
 echo "Starting compilation..."
-if [ ! -x runner ] ; then
-  riscv64-unknown-linux-gnu-gcc run_spec_tests.c -o runner
-fi
+riscv64-unknown-linux-gnu-gcc run_spec_tests.c -o runner
 echo "Compilation complete."
 
 echo "Starting spike(s)..."
