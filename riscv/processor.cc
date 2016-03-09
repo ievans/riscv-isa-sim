@@ -78,7 +78,6 @@ void state_t::reset()
   compare = 0;
   fflags = 0;
   frm = 0;
-  tag_mode = 1;
 
   load_reservation = -1;
 }
@@ -271,10 +270,6 @@ void processor_t::disasm(insn_t insn)
   uint64_t bits = insn.bits() & ((1ULL << (8 * insn_length(insn.bits()))) - 1);
   fprintf(stderr, "core %3d: 0x%016" PRIx64 " (0x%08" PRIx64 ") %s\n",
           id, state.pc, bits, disassembler->disassemble(insn).c_str());
-}
-
-void processor_t::set_tag_mode(int enforcing) {
-  state.tag_mode = enforcing;
 }
 
 void processor_t::set_pcr(int which, reg_t val)

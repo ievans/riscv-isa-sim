@@ -99,6 +99,7 @@ void sim_t::interactive()
     funcs["wmemt"] = &sim_t::interactive_wmem_t;
     funcs["wreg"] = &sim_t::interactive_wreg;
     funcs["wregt"] = &sim_t::interactive_wreg_t;
+    funcs["tagmode"] = &sim_t::interactive_tagmode;
 
     try
     {
@@ -372,6 +373,11 @@ void sim_t::interactive_wreg_t(const std::string& cmd, const std::vector<std::st
 {
   write_reg_t(args);
   fprintf(stderr, "Tag write success\n");
+}
+
+void sim_t::interactive_tagmode(const std::string& cmd, const std::vector<std::string>& args)
+{
+  fprintf(stderr, "Tag mode = %d\n", (procs[0]->get_pcr(CSR_STATUS) & SR_TAG) ? 1 : 0);
 }
 
 /* Helper functions */

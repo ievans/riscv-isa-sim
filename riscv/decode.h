@@ -135,8 +135,8 @@ private:
 #define WRITE_RD_TAG(tag) STATE.XPR.write_tag(insn.rd(), tag)
 #define WRITE_REG(reg, value, tag) STATE.XPR.write(reg, value, tag)
 #define WRITE_REG_TAG(reg, tag) STATE.XPR.write_tag(reg, tag) 
-#define TAG_ENFORCE_ON (STATE.tag_mode == 1)
-#define DATA_ENFORCE_OFF (STATE.tag_mode == 4)
+#define TAG_ENFORCE_ON (STATE.sr & SR_TAG)
+#define DATA_ENFORCE_OFF (false) // TODO(charley)
 #define RETURN_REGISTER 1
 
 #if TRAP_DEBUG

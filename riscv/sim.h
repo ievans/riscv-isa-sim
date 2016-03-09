@@ -101,6 +101,7 @@ private:
   void interactive_eval(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_insn(const std::string& cmd, const std::vector<std::string>& args);
   void interactive_debug(const std::string& cmd, const std::vector<std::string>& args);
+  void interactive_tagmode(const std::string& cmd, const std::vector<std::string>& args);
   std::string get_insn(const std::vector<std::string>& args);
   std::string get_insn_name(const std::vector<std::string>& args);
   tagged_reg_t get_reg(const std::vector<std::string>& args);
