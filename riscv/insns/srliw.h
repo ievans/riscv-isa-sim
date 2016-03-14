@@ -1,2 +1,2 @@
 require_xpr64;
-WRITE_RD_AND_TAG(sext32((uint32_t)RS1 >> SHAMT), TAG_LOGIC_IMMEDIATE(TAG_S1));
+WRITE_RD(sext32((uint32_t)RS1 >> SHAMT));
