@@ -43,7 +43,7 @@
 #define TAG_RET_FROM_MEM 2
 
 // Adapted from https://stackoverflow.com/questions/1941307/c-debug-print-macros
-#define PTAXI_DEBUG
+//#define PTAXI_DEBUG
 #ifdef PTAXI_DEBUG
 #define DPRINTF(fmt, args...) printf(fmt, ## args)
 #else
@@ -131,7 +131,6 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
 
   for (i = 0; i < states[context_id].policy_contexts.size(); i++) {
     struct ptaxi_policy_t policy = states[context_id].policy_contexts[i].policy;
-    // TODO Add more;
     bool match = (insn_type == policy.insn_type);
     if (match && policy.rs1_mask) {
       match = match && ((insn.rs1() & policy.rs1_mask) == policy.rs1_match);
@@ -139,6 +138,14 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
     if (match && policy.rs2_mask) {
       match = match && ((insn.rs2() & policy.rs2_mask) == policy.rs2_match);
     }
+
+    if (match && policy.rs1val_mask) {
+      match = match && ((RS1 & policy.rs1val_mask) == policy.rs1val_match);
+    }
+    if (match && policy.rs2val_mask) {
+      match = match && ((RS2 & policy.rs2val_mask) == policy.rs2val_match);
+    }
+
     if (match && policy.tag_arg1_mask) {
       if (!is_load_tag_arg1) {
         is_load_tag_arg1 = true;
@@ -184,20 +191,21 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
 }
 
 reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
-  std::pair<ptaxi_action_t, int> paction = determine_ptaxi_action(p, fetch.insn, pc);
+  insn_t insn = fetch.insn;
+  std::pair<ptaxi_action_t, int> paction = determine_ptaxi_action(p, insn, pc);
   ptaxi_action_t action = paction.first;
   disassembler_t* disas = p->get_disassembler();
 
   if (action & PTAXI_ACTION_DEBUG_LINE) {
     printf(ANSI_COLOR_CYAN "%p: %-25s DEBUG\n" ANSI_COLOR_RESET, pc,
-        disas->disassemble(fetch.insn).c_str());
+        disas->disassemble(insn).c_str());
   }
 
   if (action & PTAXI_ACTION_DEBUG_DETAIL) {
     size_t context_id = get_ptaxi_context_id(p, true);
 
     printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_DEBUG_DETAIL: %s\n",
-        disas->disassemble(fetch.insn).c_str());
+        disas->disassemble(insn).c_str());
 
     printf("PC: %lx, Exit Rule: %d, Context ID: %lu\n", pc, paction.second, context_id);
     print_insn(p, "INSN", fetch.insn);
@@ -208,11 +216,23 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
   if (action & PTAXI_ACTION_BLOCK) {
     size_t context_id = get_ptaxi_context_id(p, true);
 
-    DPRINTF(ANSI_COLOR_MAGENTA "PTAXI_ACTION_BLOCK: %s\n" ANSI_COLOR_RESET,
-        disas->disassemble(fetch.insn).c_str());
+    printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_BLOCK: %s\n" ANSI_COLOR_RESET,
+        disas->disassemble(insn).c_str());
+    print_policies(context_id);
     throw trap_tag_violation();
     return pc;
   }
+
+  ptaxi_insn_type_t insn_type = get_insn_type(insn);
+  if (insn_type == PTAXI_INSN_TYPE_TAGCMD && insn.rd() != 0) {
+    if (action & PTAXI_ACTION_GETTAG) {
+      DPRINTF("=== GETTAG Result: %llu\n", ((uint64_t)(TAG_S2)));
+      WRITE_RD(((uint64_t)(TAG_S2)));
+    } else {
+      WRITE_RD(RS2);
+    }
+  }
+
 
   reg_t res = fetch.func(p, fetch.insn, pc);
   return res;
@@ -245,15 +265,14 @@ void ptaxi_sim_t::run_tag_command(processor_t *p, uint64_t cmd) {
   size_t context_id = get_ptaxi_context_id(p, true);
   if (cmd == 0) {
     DPRINTF(ANSI_COLOR_CYAN "Enforcing.. Context Id = %d\n", (int) context_id);
-#ifdef PTAXI_DEBUG
-    print_policies(context_id);
-#endif
-    DPRINTF(ANSI_COLOR_RESET);
     states[context_id].is_enable = true;
   } else {
-    DPRINTF(ANSI_COLOR_YELLOW "TAG COMMAND %lu\n" ANSI_COLOR_RESET, cmd);
-    print_policies(context_id);
+    DPRINTF(ANSI_COLOR_YELLOW "TAG COMMAND %lu\n", cmd);
   }
+  #ifdef PTAXI_DEBUG
+    print_policies(context_id);
+  #endif
+    DPRINTF(ANSI_COLOR_RESET);
 }
 
 uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
@@ -285,6 +304,7 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       addr = RS1 + insn.s_imm();
     }
     break;
+    case PTAXI_INSN_TYPE_TAGCMD:
     case PTAXI_INSN_TYPE_OP: // arg1 = REG1, arg2 = REG2, out = REGOUT
     if (var_type == INSN_ARG1) {
       reg = insn.rs1();

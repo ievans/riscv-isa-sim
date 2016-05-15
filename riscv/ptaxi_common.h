@@ -27,17 +27,22 @@ enum {
   PTAXI_ACTION_CALL = 8,
   PTAXI_ACTION_DEBUG_LINE = 16,
   PTAXI_ACTION_DEBUG_DETAIL = 32,
+  PTAXI_ACTION_GETTAG = 64,
 };
 
 typedef uint8_t ptaxi_action_t;
 
 struct ptaxi_policy_t {
   // Filter
-  enum ptaxi_insn_type_t insn_type;
+  enum ptaxi_insn_type_t insn_type :8;
   uint8_t rs1_mask;
   uint8_t rs1_match;
   uint8_t rs2_mask;
   uint8_t rs2_match;
+  uint8_t rs1val_mask;
+  uint8_t rs1val_match;
+  uint8_t rs2val_mask;
+  uint8_t rs2val_match;
   uint8_t tag_arg1_mask;
   uint8_t tag_arg1_match;
   uint8_t tag_arg2_mask;
@@ -48,7 +53,7 @@ struct ptaxi_policy_t {
   uint8_t state_match;
 
   // Action
-  ptaxi_action_t action;
+  ptaxi_action_t action :8;
   uint8_t tag_out_set;
   uint8_t tag_out_tomodify;
   uint8_t state_set;
