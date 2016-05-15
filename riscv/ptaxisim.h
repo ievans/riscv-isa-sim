@@ -6,9 +6,9 @@
 #include "decode.h"
 #include "mmu.h"
 #include "processor.h"
-#include "ptaxi-common.h"
 #include <vector>
 #include <utility>
+#include "ptaxi_common.h"
 
 struct ptaxi_policy_context_t {
   ptaxi_policy_t policy;
@@ -30,7 +30,7 @@ class ptaxi_sim_t {
 public:
   ptaxi_sim_t();
   reg_t execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch);
-  void add_policy(processor_t *p, uint64_t a, uint64_t b);
+  void add_policy(processor_t *p, uint64_t a, uint64_t b, uint64_t c);
   void run_tag_command(processor_t *p, uint64_t cmd);
 private:
   void print_policies(size_t context_id);

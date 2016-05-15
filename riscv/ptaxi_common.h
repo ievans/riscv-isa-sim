@@ -33,7 +33,7 @@ typedef uint8_t ptaxi_action_t;
 
 struct ptaxi_policy_t {
   // Filter
-  enum ptaxi_insn_type_t insn_type :8;
+  enum ptaxi_insn_type_t insn_type;
   uint8_t rs1_mask;
   uint8_t rs1_match;
   uint8_t rs2_mask;
@@ -44,19 +44,26 @@ struct ptaxi_policy_t {
   uint8_t tag_arg2_match;
   uint8_t tag_out_mask;
   uint8_t tag_out_match;
+  uint8_t state_mask;
+  uint8_t state_match;
 
   // Action
-  ptaxi_action_t action :8;
+  ptaxi_action_t action;
   uint8_t tag_out_set;
   uint8_t tag_out_tomodify;
+  uint8_t state_set;
+  uint8_t state_tomodify;
   uint8_t ignore_count;
 };
+
 
 union ptaxi_policy_serialized {
   struct ptaxi_policy_t policy;
   struct ptaxi_policy_serialized_result {
     uint64_t a;
     uint64_t b;
+    uint64_t c;
   } regs;
 };
+
 #endif

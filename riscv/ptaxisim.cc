@@ -228,11 +228,12 @@ void ptaxi_sim_t::print_policies(size_t context_id) {
   printf("------\n");
 }
 
-void ptaxi_sim_t::add_policy(processor_t *p, uint64_t a, uint64_t b) {
+void ptaxi_sim_t::add_policy(processor_t *p, uint64_t a, uint64_t b, uint64_t c) {
   size_t context_id = get_ptaxi_context_id(p, true);
   union ptaxi_policy_serialized ps;
   ps.regs.a = a;
   ps.regs.b = b;
+  ps.regs.c = c;
 
   struct ptaxi_policy_context_t policy_context;
   policy_context.policy = ps.policy;
