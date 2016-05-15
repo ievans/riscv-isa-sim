@@ -16,6 +16,7 @@ class sim_t;
 class trap_t;
 class extension_t;
 class disassembler_t;
+class ptaxi_sim_t;
 
 struct insn_desc_t
 {
@@ -85,6 +86,7 @@ public:
   reg_t get_pcr(int which);
   mmu_t* get_mmu() { return mmu; }
   disassembler_t* get_disassembler() { return disassembler; }
+  ptaxi_sim_t* get_ptaxi_sim() { return ptaxi_sim; }
   state_t* get_state() { return &state; }
   extension_t* get_extension() { return ext; }
   void yield_load_reservation() { state.load_reservation = (reg_t)-1; }
@@ -101,6 +103,7 @@ private:
   mmu_t* mmu; // main memory is always accessed via the mmu
   extension_t* ext;
   disassembler_t* disassembler;
+  ptaxi_sim_t* ptaxi_sim;
   state_t state;
   uint32_t id;
   bool run; // !reset

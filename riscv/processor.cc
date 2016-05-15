@@ -15,13 +15,15 @@
 #include <limits.h>
 #include <stdexcept>
 #include <algorithm>
+#include "ptaxisim.h"
 
 #undef STATE
 #define STATE state
 
 processor_t::processor_t(sim_t* _sim, mmu_t* _mmu, uint32_t _id)
   : sim(_sim), mmu(_mmu), ext(NULL), disassembler(new disassembler_t),
-    id(_id), run(false), debug(false), noisy(false), serialized(false)
+    ptaxi_sim(new ptaxi_sim_t), id(_id), run(false), debug(false), noisy(false),
+    serialized(false)
 {
   reset(true);
   mmu->set_processor(this);
@@ -168,7 +170,7 @@ static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
   if(p->tracker != NULL)
     p->tracker->track(fetch.insn, pc);
 
-  reg_t npc = fetch.func(p, fetch.insn, pc);
+  reg_t npc = p->get_ptaxi_sim()->execute_insn(p, pc, fetch);
   commit_log(p->get_state(), fetch.insn);
   p->update_histogram(pc);
   return npc;
