@@ -345,7 +345,7 @@
 #define MATCH_FSUB_S 0x8000053
 #define MASK_FSUB_S  0xfe00007f
 #define MATCH_TAGCMD 0xb
-#define MASK_TAGCMD  0x707f
+#define MASK_TAGCMD  0xfe00707f
 #define MATCH_FMV_D_X 0xf2000053
 #define MASK_FMV_D_X  0xfff0707f
 #define MATCH_LBU 0x4003
