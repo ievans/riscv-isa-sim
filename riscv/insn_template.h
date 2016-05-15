@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "mmu.h"
 #include "mulhi.h"
 #include "softfloat.h"
@@ -5,4 +6,4 @@
 #include "internals.h" // ditto
 #include "tagpolicy.h"
 #include "decode.h"
-#include <assert.h>
+#include "ptaxisim.h"
