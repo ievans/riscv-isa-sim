@@ -60,38 +60,38 @@ ptaxi_insn_type_t ptaxi_sim_t::get_insn_type(insn_t insn) {
   switch (insn.opcode()) {
   case OPCODE_LOAD:
     if (insn.rm() == 3) {
-      return INSN_TYPE_LOAD64;
+      return PTAXI_INSN_TYPE_LOAD64;
     } else {
-      return INSN_TYPE_LOAD;
+      return PTAXI_INSN_TYPE_LOAD;
     }
   case OPCODE_STORE:
     if (insn.rm() == 3) {
-      return INSN_TYPE_STORE64;
+      return PTAXI_INSN_TYPE_STORE64;
     } else {
-      return INSN_TYPE_STORE;
+      return PTAXI_INSN_TYPE_STORE;
     }
   case OPCODE_OP:
-    return INSN_TYPE_OP;
+    return PTAXI_INSN_TYPE_OP;
   case OPCODE_OPIMM:
     if (insn.rm() == 0 && insn.i_imm() == 0) {
-      return INSN_TYPE_COPY;
+      return PTAXI_INSN_TYPE_COPY;
     }
-    return INSN_TYPE_OPIMM;
+    return PTAXI_INSN_TYPE_OPIMM;
   case OPCODE_JAL:
-    return INSN_TYPE_JAL;
+    return PTAXI_INSN_TYPE_JAL;
   case OPCODE_JALR:
     // rs1 == X_RA (X_RA = 1)
     if (insn.i_imm() == 0 && insn.rs1() == 1 && insn.rm() == 0 && insn.rd() == 0) {
-      return INSN_TYPE_RETURN;
+      return PTAXI_INSN_TYPE_RETURN;
     }
-    return INSN_TYPE_JALR;
+    return PTAXI_INSN_TYPE_JALR;
   case OPCODE_TAGCMD:
-    return INSN_TYPE_TAGCMD;
+    return PTAXI_INSN_TYPE_TAGCMD;
   case OPCODE_TAGPOLICY:
-    return INSN_TYPE_TAGPOLICY;
+    return PTAXI_INSN_TYPE_TAGPOLICY;
 
   default:
-    return INSN_TYPE_UNKNOWN;
+    return PTAXI_INSN_TYPE_UNKNOWN;
   }
 }
 
@@ -262,8 +262,8 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
   uint64_t addr;
 
   switch (insn_type) {
-  case INSN_TYPE_LOAD64: // arg1 = MEM, arg2 = N/A, out = REG
-  case INSN_TYPE_LOAD:
+  case PTAXI_INSN_TYPE_LOAD64: // arg1 = MEM, arg2 = N/A, out = REG
+  case PTAXI_INSN_TYPE_LOAD:
     if (var_type == INSN_ARG1) {
       is_mem = true;
       addr = RS1+ insn.i_imm();
@@ -273,8 +273,8 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       reg = insn.rd();
     }
     break;
-    case INSN_TYPE_STORE64: // arg1 = REG, arg2 = N/A, out = MEM
-    case INSN_TYPE_STORE:
+    case PTAXI_INSN_TYPE_STORE64: // arg1 = REG, arg2 = N/A, out = MEM
+    case PTAXI_INSN_TYPE_STORE:
     if (var_type == INSN_ARG1) {
       reg = insn.rs2();
     } else if (var_type == INSN_ARG2) {
@@ -284,7 +284,7 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       addr = RS1 + insn.s_imm();
     }
     break;
-    case INSN_TYPE_OP: // arg1 = REG1, arg2 = REG2, out = REGOUT
+    case PTAXI_INSN_TYPE_OP: // arg1 = REG1, arg2 = REG2, out = REGOUT
     if (var_type == INSN_ARG1) {
       reg = insn.rs1();
     } else if (var_type == INSN_ARG2) {
@@ -293,8 +293,8 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       reg = insn.rd();
     }
     break;
-    case INSN_TYPE_OPIMM: // arg1 = REG1, arg2 = N/A, out = REGOUT
-    case INSN_TYPE_COPY:
+    case PTAXI_INSN_TYPE_OPIMM: // arg1 = REG1, arg2 = N/A, out = REGOUT
+    case PTAXI_INSN_TYPE_COPY:
     if (var_type == INSN_ARG1) {
       reg = insn.rs1();
     } else if (var_type == INSN_ARG2) {
@@ -303,7 +303,7 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       reg = insn.rd();
     }
     break;
-    case INSN_TYPE_JAL: // arg1 = TARGET, arg2 = n/a, arg3 = REGOUT
+    case PTAXI_INSN_TYPE_JAL: // arg1 = TARGET, arg2 = n/a, arg3 = REGOUT
     if (var_type == INSN_ARG1) {
       /*is_mem = true;
        addr = pc + insn.uj_imm();*/
@@ -314,8 +314,8 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       reg = insn.rd();
     }
     break;
-    case INSN_TYPE_JALR: // arg1 = REG1, arg2 = TARGET, arg3 = REGOUT
-    case INSN_TYPE_RETURN:
+    case PTAXI_INSN_TYPE_JALR: // arg1 = REG1, arg2 = TARGET, arg3 = REGOUT
+    case PTAXI_INSN_TYPE_RETURN:
     if (var_type == INSN_ARG1) {
       reg = insn.rs1();
     } else if (var_type == INSN_ARG2) {
