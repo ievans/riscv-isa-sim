@@ -76,6 +76,24 @@ public:
       return r; \
     }
 
+  #define load_func_tag_only(type) \
+    tag_t load_tag_only_##type(reg_t addr) __attribute__((always_inline)) { \
+      tag_t tag_val = 0; \
+      void* paddr = translate(addr, sizeof(type##_t), false, false); \
+      if(likely(!has_no_tag)) { \
+        if(proc != NULL && proc->tracker != NULL) \
+          proc->tracker->track_load((uint64_t) paddr - (uint64_t) mem); \
+        if (unlikely(tracer.interested_in_range((uint64_t) paddr, sizeof(type##_t), false, false, false))) \
+          tracer.trace((uint64_t) paddr, sizeof(type##_t), false, false, false, 0); \
+        void *tagaddr = paddr_to_tagaddr(paddr); \
+        tag_val = *(tag_t*)tagaddr; \
+        if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, false, false, true))) \
+          tracer.trace((uint64_t) tagaddr, 1, false, false, true, 0); \
+      } \
+      has_no_tag = false; \
+      return tag_val; \
+    }
+
   // load value from memory at aligned address; zero extend to register width
   load_func(uint8)
   load_func(uint16)
@@ -87,6 +105,11 @@ public:
   load_func_tagged(uint32)
   load_func_tagged(uint64)
 
+  load_func_tag_only(uint8)
+  load_func_tag_only(uint16)
+  load_func_tag_only(uint32)
+  load_func_tag_only(uint64)
+
   // load value from memory at aligned address; sign extend to register width
   load_func(int8)
   load_func(int16)
@@ -97,6 +120,11 @@ public:
   load_func_tagged(int16)
   load_func_tagged(int32)
   load_func_tagged(int64)
+
+  load_func_tag_only(int8)
+  load_func_tag_only(int16)
+  load_func_tag_only(int32)
+  load_func_tag_only(int64)
 
   // template for functions that store an aligned value to memory
   #define store_func(type) \
@@ -125,6 +153,20 @@ public:
       has_no_tag = false; \
     }
 
+  #define store_func_tag_only(type) \
+    void store_tag_only_##type(reg_t addr, tag_t tag) { \
+      void* paddr = translate(addr, sizeof(type##_t), true, false); \
+      if(likely(!has_no_tag)) { \
+        if(proc != NULL && proc->tracker != NULL) \
+          proc->tracker->track_store((uint64_t) paddr - (uint64_t) mem, addr); \
+        void *tagaddr = paddr_to_tagaddr(paddr); \
+        *(tag_t*)tagaddr = tag; \
+        if (unlikely(tracer.interested_in_range((uint64_t) tagaddr, 1, true, false, true))) \
+          tracer.trace((uint64_t) tagaddr, 1, true, false, true, tag); \
+      } \
+      has_no_tag = false; \
+    }
+
   void store_tag_value(tag_t value, reg_t addr) {
     void* paddr = translate(addr, 1, true, false);
     void* tagaddr = paddr_to_tagaddr(paddr);
@@ -143,6 +185,11 @@ public:
   store_func_tagged(uint16)
   store_func_tagged(uint32)
   store_func_tagged(uint64)
+
+  store_func_tag_only(uint8)
+  store_func_tag_only(uint16)
+  store_func_tag_only(uint32)
+  store_func_tag_only(uint64)
 
   static const reg_t ICACHE_ENTRIES = 1024;
 

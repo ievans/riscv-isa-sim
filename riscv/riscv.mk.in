@@ -25,6 +25,7 @@ riscv_hdrs = \
 	tagstats.h \
 	libspike.h \
 	tracker.h \
+	ptaxisim.h \
 
 
 riscv_precompiled_hdrs = \
@@ -41,6 +42,7 @@ riscv_srcs = \
 	memtracer.cc \
 	mmu.cc \
 	disasm.cc \
+	ptaxisim.cc \
 	extension.cc \
 	rocc.cc \
 	regnames.cc \
