@@ -43,16 +43,24 @@
 #define TAG_RET_FROM_MEM 2
 
 // Adapted from https://stackoverflow.com/questions/1941307/c-debug-print-macros
+#define PTAXI_VERBOSE
 //#define PTAXI_DEBUG
-#ifdef PTAXI_DEBUG
+#ifdef PTAXI_VERBOSE
 #define DPRINTF(fmt, args...) printf(fmt, ## args)
 #else
 #define DPRINTF(fmt, args...)
 #endif
 
+#ifdef PTAXI_DEBUG
+#define DDPRINTF(fmt, args...) printf(fmt, ## args)
+#else
+#define DDPRINTF(fmt, args...)
+#endif
+
 ptaxi_sim_t::ptaxi_sim_t() {
   struct ptaxi_context_state_t default_state;
   default_state.is_enable = false;
+  default_state.priv_bits = 0;
   states.push_back(default_state);
 }
 
@@ -125,7 +133,7 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
 
   ptaxi_insn_type_t insn_type = get_insn_type(insn);
   ptaxi_action_t action = 0;
-  uint8_t tag_arg1, tag_arg2, tag_out, tag_out_updated;
+  uint8_t tag_arg1 = 0, tag_arg2 = 0, tag_out = 0, tag_out_updated = 0;
   bool is_load_tag_arg1 = false, is_load_tag_arg2 = false, is_load_tag_out = false;
   size_t i;
 
@@ -139,12 +147,17 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
       match = match && ((insn.rs2() & policy.rs2_mask) == policy.rs2_match);
     }
 
+    if (match && policy.priv_mask) {
+      match = match && ((states[context_id].priv_bits & policy.priv_mask) == policy.priv_match);
+    }
+
     if (match && policy.rs1val_mask) {
       match = match && ((RS1 & policy.rs1val_mask) == policy.rs1val_match);
     }
     if (match && policy.rs2val_mask) {
       match = match && ((RS2 & policy.rs2val_mask) == policy.rs2val_match);
     }
+
 
     if (match && policy.tag_arg1_mask) {
       if (!is_load_tag_arg1) {
@@ -177,6 +190,13 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
         continue;
       }
       tag_out_updated = ((tag_out_updated & (~policy.tag_out_tomodify)) | policy.tag_out_set);
+      if (policy.priv_tomodify) {
+        states[context_id].priv_bits = ((states[context_id].priv_bits & (~policy.priv_tomodify))
+            | policy.priv_set);
+        DPRINTF("Priv Bits set to %d\n", (int) states[context_id].priv_bits);
+      }
+
+
       action |= policy.action;
       if (policy.action == PTAXI_ACTION_BLOCK || policy.action == PTAXI_ACTION_ALLOW) {
         break;
@@ -192,12 +212,18 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
 
 reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
   insn_t insn = fetch.insn;
+  uint64_t before_tag_val = 0;
+  ptaxi_insn_type_t insn_type = get_insn_type(insn);
+  if (insn_type == PTAXI_INSN_TYPE_TAGCMD && insn.rd() != 0) {
+    before_tag_val = TAG_S2;
+  }
+
   std::pair<ptaxi_action_t, int> paction = determine_ptaxi_action(p, insn, pc);
   ptaxi_action_t action = paction.first;
   disassembler_t* disas = p->get_disassembler();
 
   if (action & PTAXI_ACTION_DEBUG_LINE) {
-    printf(ANSI_COLOR_CYAN "%p: %-25s DEBUG\n" ANSI_COLOR_RESET, pc,
+    printf(ANSI_COLOR_CYAN "%p: %-25s DEBUG\n" ANSI_COLOR_RESET, (void *) pc,
         disas->disassemble(insn).c_str());
   }
 
@@ -223,11 +249,11 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
     return pc;
   }
 
-  ptaxi_insn_type_t insn_type = get_insn_type(insn);
   if (insn_type == PTAXI_INSN_TYPE_TAGCMD && insn.rd() != 0) {
     if (action & PTAXI_ACTION_GETTAG) {
-      DPRINTF("=== GETTAG Result: %llu\n", ((uint64_t)(TAG_S2)));
-      WRITE_RD(((uint64_t)(TAG_S2)));
+      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s GETTAG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+          disas->disassemble(insn).c_str(), (int) insn.rs2(), (int) before_tag_val);
+      WRITE_RD(before_tag_val);
     } else {
       WRITE_RD(RS2);
     }
@@ -242,8 +268,9 @@ void ptaxi_sim_t::print_policies(size_t context_id) {
   printf("Policy Count: %lu\n------\n", states[context_id].policy_contexts.size());
   for (size_t i = 0; i < states[context_id].policy_contexts.size(); i++) {
     struct ptaxi_policy_context_t policy_context = states[context_id].policy_contexts[i];
-    printf("%3lu |%3d%3d |%3lu\n", i, (int) policy_context.policy.insn_type,
-        (int) policy_context.policy.action, policy_context.match_count);
+    printf("%3lu |%5d |%3d%3d |%3lu\n", i, (int) policy_context.policy.insn_type,
+        (int) policy_context.policy.rs1val_match, (int) policy_context.policy.action,
+        policy_context.match_count);
   }
   printf("------\n");
 }
@@ -264,15 +291,14 @@ void ptaxi_sim_t::add_policy(processor_t *p, uint64_t a, uint64_t b, uint64_t c)
 void ptaxi_sim_t::run_tag_command(processor_t *p, uint64_t cmd) {
   size_t context_id = get_ptaxi_context_id(p, true);
   if (cmd == 0) {
-    DPRINTF(ANSI_COLOR_CYAN "Enforcing.. Context Id = %d\n", (int) context_id);
+    DPRINTF(ANSI_COLOR_CYAN "Enforcing.. Context Id = %d\n" ANSI_COLOR_RESET, (int) context_id);
     states[context_id].is_enable = true;
   } else {
-    DPRINTF(ANSI_COLOR_YELLOW "TAG COMMAND %lu\n", cmd);
+    DPRINTF(ANSI_COLOR_YELLOW "TAG COMMAND %lu\n" ANSI_COLOR_RESET, cmd);
   }
-  #ifdef PTAXI_DEBUG
+  #ifdef PTAXI_VERBOSE
     print_policies(context_id);
   #endif
-    DPRINTF(ANSI_COLOR_RESET);
 }
 
 uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
@@ -363,12 +389,12 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
   if (is_mem) {
     if (set_tag) {
       store_tag_to_mem(p, addr, insn.rm(), tag_val);
-      DPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETMEM (%p) = %d\n" ANSI_COLOR_RESET, pc,
-          disas->disassemble(insn).c_str(), addr, (int) tag_val);
+      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETMEM (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+          disas->disassemble(insn).c_str(), (void *) addr, (int) tag_val);
 
     } else {
       uint8_t tag_val_from_mem = load_tag_from_mem(p, addr, insn.rm());
-      DPRINTF(ANSI_COLOR_CYAN "%p: %-25s LOADTG (%p) = %d\n" ANSI_COLOR_RESET, pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s LOADTG (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), addr, (int) tag_val_from_mem);
       return tag_val_from_mem;
     }
@@ -377,7 +403,7 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       return 0;
     }
     if (set_tag) {
-      DPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETREG (%2d) = %d\n" ANSI_COLOR_RESET, pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETREG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), (int) reg, (int) tag_val);
       STATE.XPR.write_tag(reg, tag_val);
     } else {
