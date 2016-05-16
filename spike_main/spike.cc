@@ -40,7 +40,7 @@ static void help()
 int main(int argc, char** argv)
 {
 
-
+/*
     // todo move this to tagpolicy.h
     printf("tag policies enabled:\n");
     printf("\tTAG_POLICY_MATCH_CALLRET: %s\n",
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
            "disabled");
 #endif
 
-
+*/
 
 
   bool debug = false;
