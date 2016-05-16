@@ -39,6 +39,8 @@
 #define OPCODE_TAGCMD    (0b0001011)
 #define OPCODE_TAGPOLICY (0b0101011)
 
+#define REG_SP 2
+
 #define TAG_RET_FROM_JAL 1
 #define TAG_RET_FROM_MEM 2
 
@@ -61,6 +63,7 @@ ptaxi_sim_t::ptaxi_sim_t() {
   struct ptaxi_context_state_t default_state;
   default_state.is_enable = false;
   default_state.priv_bits = 0;
+  default_state.lowest_sp_addr = 0;
   states.push_back(default_state);
 }
 
@@ -249,9 +252,30 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
     return pc;
   }
 
+  if (action & PTAXI_ACTION_GC) {
+    size_t context_id = get_ptaxi_context_id(p, false);
+    uint64_t cur_sp = STATE.XPR[REG_SP];
+    uint64_t lowest = states[context_id].lowest_sp_addr;
+
+    DDPRINTF(ANSI_COLOR_MAGENTA "%10p: %-25s GCSTAR (--) = %p %p\n" ANSI_COLOR_RESET, (void *) pc,
+      disas->disassemble(insn).c_str(), (void *) cur_sp, (void *) lowest);
+    uint64_t clean_from = lowest - 8;
+    uint64_t clean_to = cur_sp - 8;
+    uint64_t clean_at;
+    for(clean_at = clean_from; clean_at < clean_to; clean_at += 8) {
+      MMU.store_tagged_uint64(clean_at, 0, 0);
+    }
+
+    DDPRINTF(ANSI_COLOR_GREEN "CLEAN FROM %p to %p\n" ANSI_COLOR_RESET, (void *) clean_from,
+        (void *) clean_to);
+
+
+    states[context_id].lowest_sp_addr = cur_sp;
+  }
+
   if (insn_type == PTAXI_INSN_TYPE_TAGCMD && insn.rd() != 0) {
     if (action & PTAXI_ACTION_GETTAG) {
-      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s GETTAG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%10p: %-25s GETTAG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), (int) insn.rs2(), (int) before_tag_val);
       WRITE_RD(before_tag_val);
     } else {
@@ -260,7 +284,22 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
   }
 
 
-  reg_t res = fetch.func(p, fetch.insn, pc);
+
+  reg_t res = fetch.func(p, insn, pc);
+
+  if(insn.rd() == REG_SP && !IS_SUPERVISOR) {
+    size_t context_id = get_ptaxi_context_id(p, false);
+    if (context_id != 0) {
+      uint64_t cur_sp = STATE.XPR[REG_SP];
+      DDPRINTF(ANSI_COLOR_CYAN "%10p: %-25s MODISP (--) = %p\n" ANSI_COLOR_RESET, (void *) pc,
+          disas->disassemble(insn).c_str(), (void *) cur_sp);
+      if (cur_sp < states[context_id].lowest_sp_addr || states[context_id].lowest_sp_addr == 0) {
+        states[context_id].lowest_sp_addr = cur_sp;
+        DDPRINTF(ANSI_COLOR_BLUE "%10p: %-25s LOWEST (--) = %p\n" ANSI_COLOR_RESET, (void *) pc,
+                  disas->disassemble(insn).c_str(), (void *) cur_sp);
+      }
+    }
+  }
   return res;
 }
 
@@ -389,12 +428,12 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
   if (is_mem) {
     if (set_tag) {
       store_tag_to_mem(p, addr, insn.rm(), tag_val);
-      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETMEM (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%10p: %-25s SETMEM (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), (void *) addr, (int) tag_val);
 
     } else {
       uint8_t tag_val_from_mem = load_tag_from_mem(p, addr, insn.rm());
-      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s LOADTG (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%10p: %-25s LOADTG (%p) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), addr, (int) tag_val_from_mem);
       return tag_val_from_mem;
     }
@@ -403,7 +442,7 @@ uint8_t ptaxi_sim_t::get_or_set_tag(processor_t *p, insn_t insn, reg_t pc,
       return 0;
     }
     if (set_tag) {
-      DDPRINTF(ANSI_COLOR_CYAN "%p: %-25s SETREG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
+      DDPRINTF(ANSI_COLOR_CYAN "%10p: %-25s SETREG (%2d) = %d\n" ANSI_COLOR_RESET, (void *) pc,
           disas->disassemble(insn).c_str(), (int) reg, (int) tag_val);
       STATE.XPR.write_tag(reg, tag_val);
     } else {

@@ -18,6 +18,7 @@ struct ptaxi_context_state_t {
   std::vector<ptaxi_policy_context_t> policy_contexts;
   bool is_enable;
   uint8_t priv_bits;
+  uint64_t lowest_sp_addr;
 };
 
 #define TAG_RET_FROM_JAL 1
