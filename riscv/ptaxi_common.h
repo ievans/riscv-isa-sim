@@ -20,7 +20,7 @@ enum ptaxi_insn_type_t {
 };
 
 enum {
-  PTAXI_ACTION_CONTINUE = 0, // = no action
+  PTAXI_ACTION_CONTINUE = 0, // no action
   PTAXI_ACTION_ALLOW = 1,
   PTAXI_ACTION_BLOCK = 2,
   PTAXI_ACTION_GC = 4,
