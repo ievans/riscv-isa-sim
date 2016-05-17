@@ -43,6 +43,7 @@
 
 #define TAG_RET_FROM_JAL 1
 #define TAG_RET_FROM_MEM 2
+#define SR_TAG_SHIFT 9
 
 // Adapted from https://stackoverflow.com/questions/1941307/c-debug-print-macros
 #define PTAXI_VERBOSE
@@ -108,11 +109,15 @@ ptaxi_insn_type_t ptaxi_sim_t::get_insn_type(insn_t insn) {
 
 size_t ptaxi_sim_t::get_ptaxi_context_id(processor_t *p, bool add_if_needed) {
   size_t context_id;
-  context_id = (p->get_pcr(CSR_STATUS) & SR_TAG) ? 1 : 0;
+  context_id = (p->get_pcr(CSR_STATUS) & SR_TAG) >> SR_TAG_SHIFT;
   if (add_if_needed && context_id == 0) {
     reg_t old = p->get_pcr(CSR_STATUS);
-    p->set_pcr(CSR_STATUS, old | SR_TAG);
-    context_id = 1;
+    context_id = states.size();
+    if (context_id >= (1 << 7)) {
+      printf("Context ID Full...\n");
+      return 0;
+    }
+    p->set_pcr(CSR_STATUS, old | (context_id << SR_TAG_SHIFT));
   }
   while (context_id >= states.size()) {
     states.push_back(states[0]);
