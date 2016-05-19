@@ -44,6 +44,7 @@
 #define TAG_RET_FROM_JAL 1
 #define TAG_RET_FROM_MEM 2
 #define SR_TAG_SHIFT 9
+#define PTAXI_DEBUG_MODE_CONTEXT_ID 42 // Any number > 0 is fine here, just for debugging purpose.
 
 // Adapted from https://stackoverflow.com/questions/1941307/c-debug-print-macros
 #define PTAXI_VERBOSE
@@ -109,12 +110,16 @@ ptaxi_insn_type_t ptaxi_sim_t::get_insn_type(insn_t insn) {
 
 size_t ptaxi_sim_t::get_ptaxi_context_id(processor_t *p, bool add_if_needed) {
   size_t context_id;
-  context_id = (p->get_pcr(CSR_STATUS) & SR_TAG) >> SR_TAG_SHIFT;
+  if (benchmark_mode) {
+    context_id = PTAXI_DEBUG_MODE_CONTEXT_ID;
+  } else {
+    context_id = (p->get_pcr(CSR_STATUS) & SR_TAG) >> SR_TAG_SHIFT;
+  }
   if (add_if_needed && context_id == 0) {
     reg_t old = p->get_pcr(CSR_STATUS);
     context_id = states.size();
     if (context_id >= (1 << 7)) {
-      printf("Context ID Full...\n");
+      DPRINTF("Context ID Full...\n");
       return 0;
     }
     p->set_pcr(CSR_STATUS, old | (context_id << SR_TAG_SHIFT));
@@ -143,6 +148,7 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
   ptaxi_action_t action = 0;
   uint8_t tag_arg1 = 0, tag_arg2 = 0, tag_out = 0, tag_out_updated = 0;
   bool is_load_tag_arg1 = false, is_load_tag_arg2 = false, is_load_tag_out = false;
+  bool has_match = false;
   size_t i;
 
   for (i = 0; i < states[context_id].policy_contexts.size(); i++) {
@@ -166,11 +172,13 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
       match = match && ((RS2 & policy.rs2val_mask) == policy.rs2val_match);
     }
 
-
     if (match && policy.tag_arg1_mask) {
       if (!is_load_tag_arg1) {
         is_load_tag_arg1 = true;
         tag_arg1 = get_or_set_tag(p, insn, pc, insn_type, INSN_ARG1, false, 0);
+        if (benchmark_mode) {
+          counters.tag_read++;
+        }
       }
       match = match && ((tag_arg1 & policy.tag_arg1_mask) == policy.tag_arg1_match);
     }
@@ -178,6 +186,9 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
       if (!is_load_tag_arg2) {
         is_load_tag_arg2 = true;
         tag_arg2 = get_or_set_tag(p, insn, pc, insn_type, INSN_ARG2, false, 0);
+        if (benchmark_mode) {
+          counters.tag_read++;
+        }
       }
       match = match && ((tag_arg2 & policy.tag_arg2_mask) == policy.tag_arg2_match);
     }
@@ -187,11 +198,15 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
         is_load_tag_out = true;
         tag_out = get_or_set_tag(p, insn, pc, insn_type, INSN_OUT, false, 0);
         tag_out_updated = tag_out;
+        if (benchmark_mode) {
+          counters.tag_read++;
+        }
       }
       match = match && ((tag_out & policy.tag_out_mask) == policy.tag_out_match);
     }
 
     if (match) {
+      has_match = true;
       struct ptaxi_policy_context_t &policy_context = states[context_id].policy_contexts[i];
       policy_context.match_count++;
       if (policy_context.match_count <= policy_context.policy.ignore_count) {
@@ -212,9 +227,25 @@ std::pair<ptaxi_action_t, int> ptaxi_sim_t::determine_ptaxi_action(processor_t *
     }
   }
 
+  bool real_tag_update = false;
   if (is_load_tag_out && (tag_out != tag_out_updated)) {
+    real_tag_update = true;
     get_or_set_tag(p, insn, pc, insn_type, INSN_OUT, true, tag_out_updated);
   }
+
+  if (benchmark_mode) {
+    uint8_t bits = (((uint8_t) is_load_tag_arg1) << 3) + (((uint8_t) is_load_tag_arg2) << 2) +
+        (((uint8_t) is_load_tag_out) << 1) + (uint8_t) real_tag_update;
+    if (real_tag_update) {
+      counters.tag_write++;
+    }
+    counters.insns++;
+    counters.needs[bits]++;
+    if (has_match) {
+      counters.match_insns++;
+    }
+  }
+
   return std::make_pair(action, i);
 }
 
@@ -230,38 +261,37 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
   ptaxi_action_t action = paction.first;
   disassembler_t* disas = p->get_disassembler();
 
-  if (action & PTAXI_ACTION_DEBUG_LINE) {
-    printf(ANSI_COLOR_CYAN "%p: %-25s DEBUG\n" ANSI_COLOR_RESET, (void *) pc,
-        disas->disassemble(insn).c_str());
-  }
+  if (!benchmark_mode) {
+    if (action & PTAXI_ACTION_DEBUG_LINE) {
+      printf(ANSI_COLOR_CYAN "%p: %-25s DEBUG\n" ANSI_COLOR_RESET, (void *) pc,
+          disas->disassemble(insn).c_str());
+    }
 
-  if (action & PTAXI_ACTION_DEBUG_DETAIL) {
-    size_t context_id = get_ptaxi_context_id(p, true);
+    if (action & PTAXI_ACTION_DEBUG_DETAIL) {
+      size_t context_id = get_ptaxi_context_id(p, true);
+      printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_DEBUG_DETAIL: %s\n",
+          disas->disassemble(insn).c_str());
+      printf("PC: %lx, Exit Rule: %d, Context ID: %lu\n", pc, paction.second, context_id);
+      print_insn(p, "INSN", fetch.insn);
+      print_policies(context_id);
+      printf(ANSI_COLOR_RESET);
+    }
 
-    printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_DEBUG_DETAIL: %s\n",
-        disas->disassemble(insn).c_str());
+    if (action & PTAXI_ACTION_BLOCK) {
+      size_t context_id = get_ptaxi_context_id(p, true);
 
-    printf("PC: %lx, Exit Rule: %d, Context ID: %lu\n", pc, paction.second, context_id);
-    print_insn(p, "INSN", fetch.insn);
-    print_policies(context_id);
-    printf(ANSI_COLOR_RESET);
-  }
-
-  if (action & PTAXI_ACTION_BLOCK) {
-    size_t context_id = get_ptaxi_context_id(p, true);
-
-    printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_BLOCK: %s\n" ANSI_COLOR_RESET,
-        disas->disassemble(insn).c_str());
-    print_policies(context_id);
-    throw trap_tag_violation();
-    return pc;
+      printf(ANSI_COLOR_MAGENTA "PTAXI_ACTION_BLOCK: %s\n" ANSI_COLOR_RESET,
+          disas->disassemble(insn).c_str());
+      print_policies(context_id);
+      throw trap_tag_violation();
+      return pc;
+    }
   }
 
   if (action & PTAXI_ACTION_GC) {
     size_t context_id = get_ptaxi_context_id(p, false);
     uint64_t cur_sp = STATE.XPR[REG_SP];
     uint64_t lowest = states[context_id].lowest_sp_addr;
-
     DDPRINTF(ANSI_COLOR_MAGENTA "%10p: %-25s GCSTAR (--) = %p %p\n" ANSI_COLOR_RESET, (void *) pc,
       disas->disassemble(insn).c_str(), (void *) cur_sp, (void *) lowest);
     uint64_t clean_from = lowest - 8;
@@ -274,9 +304,9 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
     DDPRINTF(ANSI_COLOR_GREEN "CLEAN FROM %p to %p\n" ANSI_COLOR_RESET, (void *) clean_from,
         (void *) clean_to);
 
-
     states[context_id].lowest_sp_addr = cur_sp;
   }
+
 
   if (insn_type == PTAXI_INSN_TYPE_TAGCMD && insn.rd() != 0) {
     if (action & PTAXI_ACTION_GETTAG) {
@@ -287,8 +317,6 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
       WRITE_RD(RS2);
     }
   }
-
-
 
   reg_t res = fetch.func(p, insn, pc);
 
@@ -305,6 +333,7 @@ reg_t ptaxi_sim_t::execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch) {
       }
     }
   }
+
   return res;
 }
 
@@ -499,4 +528,28 @@ void ptaxi_sim_t::store_tag_to_mem(processor_t *p, uint64_t addr, uint8_t rm, ui
     throw trap_tag_violation();
     break;
   }
+}
+
+void ptaxi_sim_t::start_benchmark(processor_t *p) {
+  if (benchmark_mode) {
+    return;
+  }
+  DPRINTF(ANSI_COLOR_GREEN "Start Benchmark..\n" ANSI_COLOR_RESET);
+  memset(&counters, 0, sizeof(counters));
+  benchmark_mode = true;
+}
+
+void ptaxi_sim_t::stop_benchmark(processor_t *p) {
+  if (!benchmark_mode) {
+    return;
+  }
+  DPRINTF(ANSI_COLOR_GREEN "Stop Benchmark..\n" ANSI_COLOR_RESET);
+  print_policies(PTAXI_DEBUG_MODE_CONTEXT_ID);
+  printf("RESULT,%lu,%lu,%lu,%lu", counters.insns, counters.match_insns, counters.tag_read, counters.tag_write);
+  for(int i = 0; i < 16; i++) {
+    printf(",%lu", counters.needs[i]);
+  }
+  printf("\n");
+  benchmark_mode = false;
+
 }

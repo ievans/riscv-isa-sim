@@ -15,7 +15,9 @@ VMLINUX=$LINUX_ROOT/vmlinux
 SPIKE=$3
 
 echo "Starting compilation..."
-riscv64-unknown-linux-gnu-gcc run_spec_tests.c -o runner
+#riscv64-unknown-linux-gnu-gcc run_spec_tests.c -o runner
+riscv64-unknown-linux-gnu-gcc -I/home/chalet16/rop/ptaxi-policies -D PTAXI run_spec_tests.c -o runner
+
 echo "Compilation complete."
 
 echo "Starting spike(s)..."

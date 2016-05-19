@@ -3,6 +3,7 @@
 #include "mmu.h"
 #include "sim.h"
 #include "processor.h"
+#include "ptaxisim.h"
 
 mmu_t::mmu_t(char* _mem, char* _tagmem, size_t _memsz)
  : mem(_mem), tagmem(_tagmem), memsz(_memsz), proc(NULL)
@@ -36,6 +37,8 @@ void mmu_t::init_libspike() {
   libspike_funcs.push_back(&mmu_t::monitor);
   libspike_funcs.push_back(&mmu_t::track);
   libspike_funcs.push_back(&mmu_t::exit_with_retcode);
+  libspike_funcs.push_back(&mmu_t::start_ptaxi_benchmark);
+  libspike_funcs.push_back(&mmu_t::stop_ptaxi_benchmark);
 }
 
 void mmu_t::reset_caches() {
@@ -146,4 +149,12 @@ void mmu_t::print_memtracer()
 void mmu_t::reset_memtracer()
 {
   tracer.reset();
+}
+
+void mmu_t::start_ptaxi_benchmark() {
+  proc->get_ptaxi_sim()->start_benchmark(proc);
+}
+
+void mmu_t::stop_ptaxi_benchmark() {
+  proc->get_ptaxi_sim()->stop_benchmark(proc);
 }

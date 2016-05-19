@@ -21,6 +21,14 @@ struct ptaxi_context_state_t {
   uint64_t lowest_sp_addr;
 };
 
+struct ptaxi_benchmark_counters {
+  uint64_t insns;
+  uint64_t match_insns;
+  uint64_t tag_read;
+  uint64_t tag_write;
+  uint64_t needs[16]; // 16 bits, RARG1/RARG2/ROUT/WOUT
+};
+
 #define TAG_RET_FROM_JAL 1
 #define TAG_RET_FROM_MEM 2
 
@@ -34,6 +42,8 @@ public:
   reg_t execute_insn(processor_t *p, reg_t pc, insn_fetch_t fetch);
   void add_policy(processor_t *p, uint64_t a, uint64_t b, uint64_t c);
   void run_tag_command(processor_t *p, uint64_t cmd);
+  void start_benchmark(processor_t *p);
+  void stop_benchmark(processor_t *p);
 private:
   void print_policies(size_t context_id);
   ptaxi_insn_type_t get_insn_type(insn_t insn);
@@ -46,5 +56,7 @@ private:
   tagged_reg_t v;
   // states[0] is a default policy template.
   std::vector<ptaxi_context_state_t> states;
+  bool benchmark_mode = false;
+  ptaxi_benchmark_counters counters;
 };
 #endif

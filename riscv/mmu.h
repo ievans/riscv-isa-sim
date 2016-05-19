@@ -329,6 +329,8 @@ private:
   // Libspike functions
   void reset_caches();
   void update_cachestats();
+  void start_ptaxi_benchmark();
+  void stop_ptaxi_benchmark();
 
   // Libspike page buffer
   libspike_page_u libspike_page;

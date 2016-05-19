@@ -5,6 +5,9 @@
 #include <sys/signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#ifdef PTAXI
+#include <ptaxi.h>
+#endif
 #include "libspike.h"
 
 #define EXIT_TEST_FAILED 1
@@ -30,7 +33,12 @@ int main(int argc, char *argv[])
 
   // Parse argument.
   char* path_to_run_tests = argv[1];
-
+#ifdef PTAXI
+      libspike_start_ptaxi_benchmark();
+      ptaxi_policy_return_address(1);
+      ptaxi_enforce_policy();
+      printf("Start RUN SPEC TESTS");
+#endif
   // Exec the run_tests.sh file.
   pid_t pid = fork();
   int retcode, exitcode = EXIT_TEST_FAILED;
@@ -58,6 +66,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Test failed, returned %d\n",
           WEXITSTATUS(retcode));
       } else {
+#ifdef PTAXI
+  libspike_stop_ptaxi_benchmark();
+#endif
         fprintf(stderr, "Test got expected return 0\n");
         exitcode = EXIT_TEST_SUCCEED;
       }

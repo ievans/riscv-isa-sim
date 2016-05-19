@@ -9,7 +9,7 @@
 #define LIBSPIKE_FN_OFFSET 0xe00
 #define LIBSPIKE_TAG_OFFSET 0xf00
 
-#define ADD_FN(fn_name) inline void fn_name() {*((uint8_t*) (LIBSPIKE_BASE_ADDR + LIBSPIKE_FN_OFFSET + 8*(__LINE__ - base))) = 1;}
+#define ADD_FN(fn_name) inline void fn_name() {*((volatile uint8_t*) (LIBSPIKE_BASE_ADDR + LIBSPIKE_FN_OFFSET + 8*(__LINE__ - base))) = 1;}
 
 // To add new functions, first create function in mmu.h and add it to init_libspike() in mmu.cc
 // Then add the function here, making sure that the order is the same
@@ -20,6 +20,8 @@ ADD_FN(libspike_cachestats)
 ADD_FN(libspike_monitor)
 ADD_FN(libspike_track)
 ADD_FN(libspike_exit_with_retcode)
+ADD_FN(libspike_start_ptaxi_benchmark)
+ADD_FN(libspike_stop_ptaxi_benchmark)
 
 typedef struct {
   char name[32];

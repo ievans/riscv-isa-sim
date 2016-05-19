@@ -6,7 +6,7 @@ RUNNER_POSTPATH = "runner"
 TESTNAME = "run_test.sh"
 TESTDIR = "run_base_test_gcc43-64bit.0000/"
 DEFAULT_INPUT = "run/"
-TIMEOUT = 3600 # timeout for each execution of spike
+TIMEOUT = 36000 # timeout for each execution of spike
 
 # Class to (in a new thread)
 # execute a shell command in a separate thread
